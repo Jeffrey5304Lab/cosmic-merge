@@ -396,6 +396,15 @@ applyI18n()
 window.addEventListener('pointerdown', () => startMusic(), { once: true })
 window.addEventListener('keydown', () => startMusic(), { once: true })
 
+/* ── PWA 離線（只在正式版註冊，避免 dev 快取干擾） ── */
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* SW 註冊失敗不影響遊戲 */
+    })
+  })
+}
+
 /* ── 主迴圈 ── */
 let last = performance.now()
 function frame(now: number) {
