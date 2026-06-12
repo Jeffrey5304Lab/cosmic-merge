@@ -194,7 +194,7 @@ export class Game {
       const tierDef = TIERS[result]
       this.particles.ring(mx, my, tierDef.color, tierDef.radius * 2.2)
       this.particles.burst(mx, my, tierDef.color, 10 + result * 3, 120 + result * 25)
-      this.particles.float(mx, my - tierDef.radius, `+${gained}${multiplier > 1 ? ` ×${multiplier}` : ''}`, '#FDE047')
+      this.particles.float(mx, my - tierDef.radius, `+${gained}${multiplier > 1 ? ` ×${multiplier}` : ''}`, '#F6EAC9')
       this.shake = Math.min(6, 1 + result * 0.5)
       if (result === MAX_TIER) playFanfare()
       else playMerge(result)

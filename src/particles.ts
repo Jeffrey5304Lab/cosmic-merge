@@ -100,9 +100,9 @@ export class ParticleSystem {
       const progress = t.life / t.maxLife
       g.globalAlpha = 1 - progress
       g.fillStyle = t.color
-      g.font = "bold 22px 'Baloo 2', 'Nunito', sans-serif"
+      g.font = "bold 24px 'Gochi Hand', 'Noto Sans TC', cursive"
       g.textAlign = 'center'
-      g.strokeStyle = 'rgba(0,0,0,0.6)'
+      g.strokeStyle = 'rgba(59, 48, 36, 0.75)'
       g.lineWidth = 4
       g.strokeText(t.text, t.x, t.y)
       g.fillText(t.text, t.x, t.y)

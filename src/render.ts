@@ -1,7 +1,31 @@
 import type { PlanetTier } from './planets'
 import { BOARD } from './planets'
 
-/* ══════════════ 背景：星空 + 星雲 + 流星 ══════════════ */
+/** 手繪墨色 */
+const INK = '#3B3024'
+
+/* ══════════════ 手繪基礎筆觸 ══════════════ */
+
+/**
+ * 抖動圓：用低頻正弦擾動半徑，模擬手繪的不完美邊線。
+ * seed 固定（依星球階級），同一顆球每幀形狀一致不會抖動。
+ */
+function wobblyCirclePath(g: CanvasRenderingContext2D, r: number, seed: number) {
+  const segments = 44
+  g.beginPath()
+  for (let i = 0; i <= segments; i++) {
+    const theta = (i / segments) * Math.PI * 2
+    const wobble = 1 + 0.022 * Math.sin(theta * 5 + seed) + 0.014 * Math.sin(theta * 3 + seed * 2.7)
+    const pr = r * wobble
+    const x = Math.cos(theta) * pr
+    const y = Math.sin(theta) * pr
+    if (i === 0) g.moveTo(x, y)
+    else g.lineTo(x, y)
+  }
+  g.closePath()
+}
+
+/* ══════════════ 背景：繪本夜空 ══════════════ */
 
 interface Star {
   x: number
@@ -15,49 +39,93 @@ export function makeStars(count: number, rng: () => number = Math.random): Star[
   return Array.from({ length: count }, () => ({
     x: rng() * BOARD.width,
     y: rng() * BOARD.height,
-    r: 0.5 + rng() * 1.5,
+    r: 1 + rng() * 2.2,
     phase: rng() * Math.PI * 2,
     speed: 0.5 + rng() * 1.5,
   }))
 }
 
-/** 緩慢漂移的星雲色塊 */
-function drawNebula(g: CanvasRenderingContext2D, time: number) {
+/** 手繪四芒星 ✦ */
+function drawSparkle(g: CanvasRenderingContext2D, x: number, y: number, r: number) {
+  g.beginPath()
+  g.moveTo(x, y - r)
+  g.quadraticCurveTo(x, y, x + r, y)
+  g.quadraticCurveTo(x, y, x, y + r)
+  g.quadraticCurveTo(x, y, x - r, y)
+  g.quadraticCurveTo(x, y, x, y - r)
+  g.fill()
+}
+
+/** 水彩暈染色塊 */
+function drawWatercolor(g: CanvasRenderingContext2D, time: number) {
   const blobs = [
-    { x: 0.25, y: 0.3, r: 280, color: '124, 58, 237', drift: 0.7 }, // 紫
-    { x: 0.8, y: 0.65, r: 260, color: '20, 184, 166', drift: 1.3 }, // 青
-    { x: 0.55, y: 0.9, r: 220, color: '236, 72, 153', drift: 1.0 }, // 粉
+    { x: 0.22, y: 0.28, r: 230, color: '139, 121, 184', drift: 0.7 }, // 藕紫
+    { x: 0.82, y: 0.6, r: 210, color: '95, 143, 168', drift: 1.2 }, // 灰藍
+    { x: 0.5, y: 0.88, r: 190, color: '201, 139, 139', drift: 0.9 }, // 豆沙紅
   ]
   for (const b of blobs) {
-    const bx = b.x * BOARD.width + Math.sin(time * 0.05 * b.drift) * 30
-    const by = b.y * BOARD.height + Math.cos(time * 0.04 * b.drift) * 24
-    const grad = g.createRadialGradient(bx, by, 0, bx, by, b.r)
-    grad.addColorStop(0, `rgba(${b.color}, 0.10)`)
+    const bx = b.x * BOARD.width + Math.sin(time * 0.05 * b.drift) * 24
+    const by = b.y * BOARD.height + Math.cos(time * 0.04 * b.drift) * 20
+    const grad = g.createRadialGradient(bx, by, b.r * 0.2, bx, by, b.r)
+    grad.addColorStop(0, `rgba(${b.color}, 0.12)`)
+    grad.addColorStop(0.8, `rgba(${b.color}, 0.05)`)
     grad.addColorStop(1, `rgba(${b.color}, 0)`)
     g.fillStyle = grad
     g.fillRect(bx - b.r, by - b.r, b.r * 2, b.r * 2)
   }
 }
 
+/** 紙張顆粒（lazy 建一次 pattern） */
+let grainPattern: CanvasPattern | null = null
+function getGrain(g: CanvasRenderingContext2D): CanvasPattern | null {
+  if (grainPattern || typeof document === 'undefined') return grainPattern
+  const c = document.createElement('canvas')
+  c.width = c.height = 96
+  const gg = c.getContext('2d')
+  if (!gg) return null
+  for (let i = 0; i < 320; i++) {
+    gg.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'
+    gg.fillRect(Math.random() * 96, Math.random() * 96, 1, 1)
+  }
+  grainPattern = g.createPattern(c, 'repeat')
+  return grainPattern
+}
+
 export function drawBackground(g: CanvasRenderingContext2D, stars: Star[], time: number) {
+  // 暖調靛藍夜空（繪本水彩感）
   const grad = g.createLinearGradient(0, 0, 0, BOARD.height)
-  grad.addColorStop(0, '#0B0B1E')
-  grad.addColorStop(0.6, '#141432')
-  grad.addColorStop(1, '#1B1040')
+  grad.addColorStop(0, '#3D4466')
+  grad.addColorStop(0.55, '#454E73')
+  grad.addColorStop(1, '#4F578068')
+  g.fillStyle = '#414968'
+  g.fillRect(0, 0, BOARD.width, BOARD.height)
   g.fillStyle = grad
   g.fillRect(0, 0, BOARD.width, BOARD.height)
 
-  drawNebula(g, time)
+  drawWatercolor(g, time)
 
+  // 手繪星星：大顆畫四芒星、小顆畫點
+  g.fillStyle = '#F6EAC9'
   for (const s of stars) {
-    const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * s.speed + s.phase))
+    const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(time * s.speed + s.phase))
     g.globalAlpha = tw
-    g.fillStyle = '#E0E7FF'
-    g.beginPath()
-    g.arc(s.x, s.y, s.r, 0, Math.PI * 2)
-    g.fill()
+    if (s.r > 2.4) drawSparkle(g, s.x, s.y, s.r * 1.6)
+    else {
+      g.beginPath()
+      g.arc(s.x, s.y, s.r * 0.55, 0, Math.PI * 2)
+      g.fill()
+    }
   }
   g.globalAlpha = 1
+
+  // 紙張顆粒疊在最上面，整張畫面帶紙感
+  const grain = getGrain(g)
+  if (grain) {
+    g.globalAlpha = 0.07
+    g.fillStyle = grain
+    g.fillRect(0, 0, BOARD.width, BOARD.height)
+    g.globalAlpha = 1
+  }
 }
 
 interface Meteor {
@@ -68,20 +136,20 @@ interface Meteor {
   life: number
 }
 
-/** 偶爾劃過的流星 */
+/** 偶爾劃過的手繪流星 */
 export class ShootingStars {
   private meteors: Meteor[] = []
   private nextSpawn = 2
 
   update(dt: number, time: number) {
     if (time > this.nextSpawn) {
-      this.nextSpawn = time + 4 + Math.random() * 6
+      this.nextSpawn = time + 5 + Math.random() * 7
       const fromLeft = Math.random() > 0.5
       this.meteors.push({
         x: fromLeft ? -20 : BOARD.width + 20,
-        y: 20 + Math.random() * BOARD.height * 0.35,
-        vx: (fromLeft ? 1 : -1) * (350 + Math.random() * 200),
-        vy: 130 + Math.random() * 90,
+        y: 20 + Math.random() * BOARD.height * 0.3,
+        vx: (fromLeft ? 1 : -1) * (300 + Math.random() * 160),
+        vy: 110 + Math.random() * 80,
         life: 0,
       })
     }
@@ -95,17 +163,18 @@ export class ShootingStars {
 
   draw(g: CanvasRenderingContext2D) {
     for (const m of this.meteors) {
-      const tail = 0.13 // 尾巴長度（秒）
-      const grad = g.createLinearGradient(m.x, m.y, m.x - m.vx * tail, m.y - m.vy * tail)
-      grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)')
-      grad.addColorStop(1, 'rgba(255, 255, 255, 0)')
-      g.strokeStyle = grad
-      g.lineWidth = 2
+      const tail = 0.14
+      g.strokeStyle = 'rgba(246, 234, 201, 0.8)'
+      g.lineWidth = 2.5
       g.lineCap = 'round'
+      g.setLineDash([7, 5]) // 虛線尾巴＝手繪速度線
       g.beginPath()
       g.moveTo(m.x, m.y)
       g.lineTo(m.x - m.vx * tail, m.y - m.vy * tail)
       g.stroke()
+      g.setLineDash([])
+      g.fillStyle = '#F6EAC9'
+      drawSparkle(g, m.x, m.y, 5)
     }
   }
 }
@@ -113,12 +182,12 @@ export class ShootingStars {
 /* ══════════════ 警戒線 ══════════════ */
 
 export function drawLoseLine(g: CanvasRenderingContext2D, time: number, danger: boolean) {
-  const alpha = danger ? 0.5 + 0.5 * Math.sin(time * 8) : 0.18
+  const alpha = danger ? 0.55 + 0.45 * Math.sin(time * 8) : 0.3
   g.save()
   g.globalAlpha = alpha
-  g.strokeStyle = danger ? '#F87171' : '#94A3B8'
-  g.setLineDash([10, 8])
-  g.lineWidth = 2
+  g.strokeStyle = danger ? '#E2705B' : '#B9AF99'
+  g.setLineDash([12, 9])
+  g.lineWidth = 2.5
   g.beginPath()
   g.moveTo(0, BOARD.loseY)
   g.lineTo(BOARD.width, BOARD.loseY)
@@ -126,19 +195,18 @@ export function drawLoseLine(g: CanvasRenderingContext2D, time: number, danger: 
   g.restore()
 }
 
-/** 瀕死紅暈（從頂端壓下來的危機感） */
+/** 瀕死警示：暖紅水彩從頂端暈開 */
 export function drawDangerVignette(g: CanvasRenderingContext2D, time: number, intensity: number) {
   const pulse = 0.6 + 0.4 * Math.sin(time * 6)
   const grad = g.createLinearGradient(0, 0, 0, BOARD.loseY * 1.6)
-  grad.addColorStop(0, `rgba(239, 68, 68, ${0.34 * intensity * pulse})`)
-  grad.addColorStop(1, 'rgba(239, 68, 68, 0)')
+  grad.addColorStop(0, `rgba(201, 84, 63, ${0.36 * intensity * pulse})`)
+  grad.addColorStop(1, 'rgba(201, 84, 63, 0)')
   g.fillStyle = grad
   g.fillRect(0, 0, BOARD.width, BOARD.loseY * 1.6)
 }
 
-/* ══════════════ 星球表面紋理 ══════════════ */
+/* ══════════════ 星球表面（紙剪拼貼風） ══════════════ */
 
-/** 在已 clip 的星球內畫橫向條紋（fraction 座標，-1～1） */
 function paintBands(
   g: CanvasRenderingContext2D,
   r: number,
@@ -154,7 +222,6 @@ function paintBands(
   g.globalAlpha = 1
 }
 
-/** 隕石坑（fraction 座標） */
 function paintCraters(
   g: CanvasRenderingContext2D,
   r: number,
@@ -162,78 +229,69 @@ function paintCraters(
   spots: Array<[number, number, number]>,
 ) {
   for (const [x, y, s] of spots) {
-    g.globalAlpha = 0.35
+    g.globalAlpha = 0.4
     g.fillStyle = color
     g.beginPath()
     g.arc(x * r, y * r, s * r, 0, Math.PI * 2)
     g.fill()
-    // 坑緣高光
-    g.globalAlpha = 0.25
-    g.strokeStyle = '#FFFFFF'
-    g.lineWidth = Math.max(1, s * r * 0.2)
-    g.beginPath()
-    g.arc(x * r, y * r, s * r, Math.PI * 0.9, Math.PI * 1.7)
-    g.stroke()
   }
   g.globalAlpha = 1
 }
 
-/** 各星球專屬表面（在 clip + 物理旋轉座標系內呼叫） */
 function paintSurface(g: CanvasRenderingContext2D, tier: PlanetTier, r: number) {
   switch (tier.tier) {
-    case 0: // 隕石：粗糙坑洞
-      paintCraters(g, r, '#292524', [
+    case 0:
+      paintCraters(g, r, '#7E7261', [
         [-0.35, 0.2, 0.22],
         [0.3, -0.25, 0.16],
         [0.15, 0.45, 0.13],
       ])
       break
-    case 1: // 月球：經典隕石坑
-      paintCraters(g, r, '#78716C', [
+    case 1:
+      paintCraters(g, r, '#B5A788', [
         [-0.3, -0.2, 0.2],
         [0.35, 0.15, 0.15],
         [-0.1, 0.45, 0.12],
         [0.1, -0.5, 0.1],
       ])
       break
-    case 2: // 水星：細小坑洞 + 焦灼條
-      paintCraters(g, r, '#92400E', [
+    case 2:
+      paintCraters(g, r, '#A87B33', [
         [-0.4, 0.1, 0.13],
         [0.25, -0.35, 0.11],
         [0.4, 0.35, 0.1],
-        [-0.05, -0.15, 0.08],
       ])
-      paintBands(g, r, [{ y: 0.55, h: 0.3, color: '#B45309', alpha: 0.25 }])
+      paintBands(g, r, [{ y: 0.55, h: 0.3, color: '#C19140', alpha: 0.3 }])
       break
-    case 3: // 火星：暗色地形 + 極冠
+    case 3:
       paintBands(g, r, [
-        { y: 0.15, h: 0.5, color: '#7F1D1D', alpha: 0.3 },
-        { y: -0.4, h: 0.3, color: '#991B1B', alpha: 0.25 },
+        { y: 0.15, h: 0.5, color: '#A3452E', alpha: 0.3 },
+        { y: -0.4, h: 0.3, color: '#B0503A', alpha: 0.25 },
       ])
-      g.globalAlpha = 0.8
-      g.fillStyle = '#FEF2F2'
+      g.globalAlpha = 0.85
+      g.fillStyle = '#F4E8DA'
       g.beginPath()
       g.ellipse(0, -r * 0.88, r * 0.45, r * 0.18, 0, 0, Math.PI * 2)
       g.fill()
       g.globalAlpha = 1
       break
-    case 4: // 金星：乳白漩渦雲帶
+    case 4:
       paintBands(g, r, [
-        { y: -0.45, h: 0.35, color: '#FEF3C7', alpha: 0.5 },
-        { y: 0.05, h: 0.3, color: '#FDE68A', alpha: 0.4 },
-        { y: 0.5, h: 0.35, color: '#FEF3C7', alpha: 0.45 },
+        { y: -0.45, h: 0.35, color: '#F7E0C3', alpha: 0.55 },
+        { y: 0.05, h: 0.3, color: '#E8C79B', alpha: 0.45 },
+        { y: 0.5, h: 0.35, color: '#F7E0C3', alpha: 0.5 },
       ])
       break
-    case 5: { // 地球：大陸 + 雲
-      g.fillStyle = '#34D399'
-      g.globalAlpha = 0.9
+    case 5: {
+      g.fillStyle = '#94BA88'
+      g.globalAlpha = 0.95
       g.beginPath()
       g.ellipse(-r * 0.35, -r * 0.25, r * 0.34, r * 0.24, -0.5, 0, Math.PI * 2)
       g.ellipse(r * 0.3, r * 0.3, r * 0.28, r * 0.34, 0.4, 0, Math.PI * 2)
       g.ellipse(r * 0.45, -r * 0.45, r * 0.16, r * 0.12, 0, 0, Math.PI * 2)
       g.fill()
-      g.globalAlpha = 0.4
-      g.fillStyle = '#FFFFFF'
+      g.globalAlpha = 0.5
+      g.fillStyle = '#F4EDE0'
       g.beginPath()
       g.ellipse(-r * 0.1, r * 0.5, r * 0.5, r * 0.1, 0.15, 0, Math.PI * 2)
       g.ellipse(r * 0.2, -r * 0.55, r * 0.4, r * 0.09, -0.1, 0, Math.PI * 2)
@@ -241,63 +299,53 @@ function paintSurface(g: CanvasRenderingContext2D, tier: PlanetTier, r: number) 
       g.globalAlpha = 1
       break
     }
-    case 6: // 海王星：深藍帶 + 大暗斑
+    case 6:
       paintBands(g, r, [
-        { y: -0.35, h: 0.3, color: '#312E81', alpha: 0.45 },
-        { y: 0.3, h: 0.4, color: '#4338CA', alpha: 0.35 },
-      ])
-      g.globalAlpha = 0.5
-      g.fillStyle = '#1E1B4B'
-      g.beginPath()
-      g.ellipse(-r * 0.25, -r * 0.05, r * 0.26, r * 0.16, -0.3, 0, Math.PI * 2)
-      g.fill()
-      g.globalAlpha = 1
-      break
-    case 7: // 天王星：冰藍柔和帶
-      paintBands(g, r, [
-        { y: -0.5, h: 0.4, color: '#A5F3FC', alpha: 0.4 },
-        { y: 0.1, h: 0.3, color: '#0E7490', alpha: 0.25 },
-        { y: 0.6, h: 0.35, color: '#CFFAFE', alpha: 0.35 },
+        { y: -0.35, h: 0.3, color: '#4E5890', alpha: 0.45 },
+        { y: 0.3, h: 0.4, color: '#6973B2', alpha: 0.35 },
       ])
       break
-    case 8: // 土星：金色雲帶（環在外面畫）
+    case 7:
       paintBands(g, r, [
-        { y: -0.55, h: 0.3, color: '#FEF3C7', alpha: 0.45 },
-        { y: -0.1, h: 0.35, color: '#D97706', alpha: 0.3 },
-        { y: 0.4, h: 0.3, color: '#FDE68A', alpha: 0.4 },
+        { y: -0.5, h: 0.4, color: '#C2E6E9', alpha: 0.5 },
+        { y: 0.1, h: 0.3, color: '#5B989E', alpha: 0.3 },
+        { y: 0.6, h: 0.35, color: '#C2E6E9', alpha: 0.4 },
       ])
       break
-    case 9: // 木星：醒目條紋 + 大紅斑
+    case 8:
       paintBands(g, r, [
-        { y: -0.6, h: 0.28, color: '#FED7AA', alpha: 0.55 },
-        { y: -0.25, h: 0.25, color: '#C2410C', alpha: 0.45 },
-        { y: 0.15, h: 0.3, color: '#FDBA74', alpha: 0.5 },
-        { y: 0.55, h: 0.28, color: '#9A3412', alpha: 0.4 },
+        { y: -0.55, h: 0.3, color: '#F2DCAE', alpha: 0.5 },
+        { y: -0.1, h: 0.35, color: '#C58F3D', alpha: 0.35 },
+        { y: 0.4, h: 0.3, color: '#EFD198', alpha: 0.45 },
       ])
-      g.globalAlpha = 0.85
-      g.fillStyle = '#DC2626'
+      break
+    case 9:
+      paintBands(g, r, [
+        { y: -0.6, h: 0.28, color: '#F0CFA8', alpha: 0.55 },
+        { y: -0.25, h: 0.25, color: '#B5683B', alpha: 0.45 },
+        { y: 0.15, h: 0.3, color: '#EDB987', alpha: 0.5 },
+        { y: 0.55, h: 0.28, color: '#A8602F', alpha: 0.4 },
+      ])
+      g.globalAlpha = 0.9
+      g.fillStyle = '#C44F3C'
       g.beginPath()
       g.ellipse(r * 0.3, r * 0.32, r * 0.2, r * 0.13, 0.2, 0, Math.PI * 2)
       g.fill()
-      g.globalAlpha = 0.4
-      g.strokeStyle = '#FECACA'
-      g.lineWidth = r * 0.03
-      g.stroke()
       g.globalAlpha = 1
       break
-    case 10: // 太陽：表面熱對流斑
+    case 10:
       paintBands(g, r, [
-        { y: -0.4, h: 0.4, color: '#FEF9C3', alpha: 0.4 },
-        { y: 0.35, h: 0.45, color: '#F97316', alpha: 0.3 },
+        { y: -0.4, h: 0.4, color: '#F9E59A', alpha: 0.5 },
+        { y: 0.35, h: 0.45, color: '#E0A93E', alpha: 0.35 },
       ])
       break
   }
 }
 
-/* ══════════════ 星球本體 ══════════════ */
+/* ══════════════ 星球本體（手繪紙剪風） ══════════════ */
 
 /**
- * 畫一顆 chibi 星球：漸層球體 + 專屬表面紋理 + 可愛表情。
+ * 畫一顆 cozy 星球：抖動邊線 + 平塗色塊 + 紙剪陰影 + 墨水表情。
  * 表面跟著物理角度旋轉、表情永遠朝上。
  */
 export function drawPlanet(
@@ -310,80 +358,81 @@ export function drawPlanet(
   time = 0,
 ) {
   const r = tier.radius * scale
+  const seed = tier.tier * 3.7 + 1
   g.save()
   g.translate(x, y)
 
-  // 太陽：動態日冕光環 + 旋轉光芒
+  // 太陽：手繪三角光芒，緩慢呼吸
   if (tier.glow) {
-    const breathe = 1 + 0.06 * Math.sin(time * 2)
-    const glow = g.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 1.9 * breathe)
-    glow.addColorStop(0, 'rgba(253, 224, 71, 0.5)')
-    glow.addColorStop(1, 'rgba(253, 224, 71, 0)')
-    g.fillStyle = glow
-    g.beginPath()
-    g.arc(0, 0, r * 1.9 * breathe, 0, Math.PI * 2)
-    g.fill()
-
     g.save()
-    g.rotate(time * 0.3)
-    g.fillStyle = 'rgba(253, 224, 71, 0.35)'
+    g.rotate(time * 0.15)
+    g.fillStyle = 'rgba(232, 179, 60, 0.75)'
     for (let i = 0; i < 12; i++) {
       g.rotate(Math.PI / 6)
-      const flare = 1 + 0.25 * Math.sin(time * 3 + i)
+      const flare = 1 + 0.18 * Math.sin(time * 2.5 + i * 1.7)
       g.beginPath()
-      g.moveTo(r * 1.02, -r * 0.07)
-      g.lineTo(r * (1.22 + 0.12 * flare), 0)
-      g.lineTo(r * 1.02, r * 0.07)
+      g.moveTo(r * 1.04, -r * 0.09)
+      g.lineTo(r * (1.26 + 0.1 * flare), 0)
+      g.lineTo(r * 1.04, r * 0.09)
       g.closePath()
       g.fill()
     }
     g.restore()
   }
 
-  // 行星環（後半）
+  // 行星環（後半）：雙線手繪感
   if (tier.ring) {
     g.save()
     g.rotate(-0.35)
-    g.strokeStyle = '#FDE68A'
-    g.lineWidth = r * 0.16
-    g.globalAlpha = 0.9
+    g.strokeStyle = '#EFD7A7'
+    g.lineWidth = r * 0.15
+    g.globalAlpha = 0.95
     g.beginPath()
     g.ellipse(0, 0, r * 1.45, r * 0.42, 0, Math.PI * 0.05, Math.PI * 0.95)
+    g.stroke()
+    g.strokeStyle = INK
+    g.lineWidth = Math.max(1.2, r * 0.02)
+    g.globalAlpha = 0.5
+    g.beginPath()
+    g.ellipse(0, 0, r * 1.52, r * 0.46, 0, Math.PI * 0.08, Math.PI * 0.92)
     g.stroke()
     g.restore()
   }
 
   g.rotate(angle)
 
-  // 球體
-  const body = g.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r)
-  body.addColorStop(0, '#FFFFFF')
-  body.addColorStop(0.25, tier.color)
-  body.addColorStop(1, tier.edge)
-  g.fillStyle = body
-  g.beginPath()
-  g.arc(0, 0, r, 0, Math.PI * 2)
+  // 平塗主體（抖動邊線）
+  g.fillStyle = tier.color
+  wobblyCirclePath(g, r, seed)
   g.fill()
 
-  // 表面紋理（clip 在球內）
+  // 紙剪陰影：clip 進主體，疊一層往右下偏的陰影色
   g.save()
-  g.beginPath()
-  g.arc(0, 0, r, 0, Math.PI * 2)
+  wobblyCirclePath(g, r, seed)
   g.clip()
+  g.fillStyle = tier.edge
+  g.globalAlpha = 0.55
+  g.beginPath()
+  g.arc(-r * 0.16, -r * 0.18, r * 1.05, 0, Math.PI * 2)
+  // evenodd：填「主體扣掉偏移圓」之外的月牙
+  wobblyCirclePath(g, r * 1.4, seed)
+  g.fill('evenodd')
+  g.globalAlpha = 1
   paintSurface(g, tier, r)
-  // 邊緣陰影增加立體感
-  const rim = g.createRadialGradient(0, 0, r * 0.7, 0, 0, r)
-  rim.addColorStop(0, 'rgba(0,0,0,0)')
-  rim.addColorStop(1, 'rgba(10, 5, 30, 0.35)')
-  g.fillStyle = rim
-  g.fillRect(-r, -r, r * 2, r * 2)
   g.restore()
 
-  // 粗邊框（chibi 風格）
-  g.strokeStyle = 'rgba(15, 10, 40, 0.55)'
-  g.lineWidth = Math.max(2, r * 0.07)
+  // 紙感高光：左上一小塊平塗白
+  g.globalAlpha = 0.5
+  g.fillStyle = '#FFF9EC'
   g.beginPath()
-  g.arc(0, 0, r, 0, Math.PI * 2)
+  g.ellipse(-r * 0.42, -r * 0.45, r * 0.2, r * 0.1, -0.7, 0, Math.PI * 2)
+  g.fill()
+  g.globalAlpha = 1
+
+  // 墨水描邊
+  g.strokeStyle = INK
+  g.lineWidth = Math.max(2, r * 0.055)
+  wobblyCirclePath(g, r, seed)
   g.stroke()
 
   g.rotate(-angle) // 臉永遠朝上
@@ -392,42 +441,47 @@ export function drawPlanet(
   if (tier.ring) {
     g.save()
     g.rotate(-0.35)
-    g.strokeStyle = '#FCD34D'
-    g.lineWidth = r * 0.16
+    g.strokeStyle = '#E5C684'
+    g.lineWidth = r * 0.15
     g.beginPath()
     g.ellipse(0, 0, r * 1.45, r * 0.42, 0, Math.PI * 1.05, Math.PI * 1.95)
+    g.stroke()
+    g.strokeStyle = INK
+    g.lineWidth = Math.max(1.2, r * 0.02)
+    g.globalAlpha = 0.5
+    g.beginPath()
+    g.ellipse(0, 0, r * 1.52, r * 0.46, 0, Math.PI * 1.08, Math.PI * 1.92)
     g.stroke()
     g.restore()
   }
 
-  // chibi 表情：眼睛 + 嘴巴 + 腮紅
+  // 墨水表情
   const eyeY = -r * 0.12
   const eyeDX = r * 0.32
   const blink = Math.sin(time * 0.7 + tier.tier * 1.3) > 0.97 ? 0.15 : 1
-  g.fillStyle = '#1C1917'
+  g.fillStyle = INK
   for (const dir of [-1, 1]) {
     g.beginPath()
-    g.ellipse(dir * eyeDX, eyeY, r * 0.1, r * 0.14 * blink, 0, 0, Math.PI * 2)
+    g.ellipse(dir * eyeDX, eyeY, r * 0.09, r * 0.13 * blink, 0, 0, Math.PI * 2)
     g.fill()
   }
   if (blink === 1) {
-    g.fillStyle = '#FFFFFF'
+    g.fillStyle = '#FFF9EC'
     for (const dir of [-1, 1]) {
       g.beginPath()
-      g.arc(dir * eyeDX - r * 0.03, eyeY - r * 0.05, r * 0.035, 0, Math.PI * 2)
+      g.arc(dir * eyeDX - r * 0.03, eyeY - r * 0.05, r * 0.032, 0, Math.PI * 2)
       g.fill()
     }
   }
-  // 微笑
-  g.strokeStyle = '#1C1917'
-  g.lineWidth = Math.max(1.5, r * 0.05)
+  g.strokeStyle = INK
+  g.lineWidth = Math.max(1.5, r * 0.045)
   g.lineCap = 'round'
   g.beginPath()
   g.arc(0, r * 0.12, r * 0.22, Math.PI * 0.15, Math.PI * 0.85)
   g.stroke()
   // 腮紅
-  g.globalAlpha = 0.35
-  g.fillStyle = '#FB7185'
+  g.globalAlpha = 0.5
+  g.fillStyle = '#E2867A'
   for (const dir of [-1, 1]) {
     g.beginPath()
     g.ellipse(dir * r * 0.52, r * 0.12, r * 0.12, r * 0.07, 0, 0, Math.PI * 2)
@@ -441,8 +495,8 @@ export function drawPlanet(
 /** 投放瞄準虛線 */
 export function drawAimLine(g: CanvasRenderingContext2D, x: number) {
   g.save()
-  g.strokeStyle = 'rgba(255, 255, 255, 0.25)'
-  g.setLineDash([4, 10])
+  g.strokeStyle = 'rgba(246, 234, 201, 0.35)'
+  g.setLineDash([5, 11])
   g.lineWidth = 2
   g.beginPath()
   g.moveTo(x, BOARD.dropY)

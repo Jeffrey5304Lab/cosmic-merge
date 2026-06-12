@@ -1,14 +1,16 @@
 :root {
-  --bg: #0b0b1e;
-  --surface: #15152e;
-  --border: #2a2a4a;
-  --text: #f1f5f9;
-  --text-dim: #94a3b8;
-  --accent: #fde047;
-  --accent-2: #a78bfa;
-  --danger: #f87171;
+  /* 手繪紙感色票 */
+  --paper: #f4e9d7;
+  --card: #fdf6e9;
+  --ink: #3b3024;
+  --ink-soft: #6b5844;
+  --text-dim: #9c8b76;
+  --line: #d8c7ac;
+  --accent: #e07a5f; /* 陶土橘 */
+  --honey: #e8a33d;
+  --night: #414968; /* 畫板夜空 */
   --font-ui: 'Noto Sans TC', system-ui, sans-serif;
-  --font-display: 'Baloo 2', 'Noto Sans TC', sans-serif;
+  --font-display: 'Gochi Hand', 'Noto Sans TC', cursive;
 }
 
 * {
@@ -23,10 +25,10 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 70% -10%, #1e1b4b66, transparent),
-    var(--bg);
-  color: var(--text);
+  /* 奶油紙張底 + 細微紙紋 */
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.28 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  color: var(--ink);
   font-family: var(--font-ui);
   display: flex;
   justify-content: center;
@@ -58,10 +60,14 @@ body {
 
 .title {
   font-family: var(--font-display);
-  font-size: clamp(22px, 5vw, 32px);
-  font-weight: 800;
+  font-size: clamp(24px, 5.5vw, 36px);
+  font-weight: 700;
   letter-spacing: 2px;
-  text-shadow: 0 0 24px #a78bfa88;
+  color: var(--ink);
+  /* 手繪底線 */
+  background: linear-gradient(to right, transparent, var(--honey) 15%, var(--honey) 85%, transparent)
+    bottom / 100% 6px no-repeat;
+  padding-bottom: 4px;
 }
 
 .title-accent {
@@ -82,12 +88,13 @@ body {
   font-size: 11px;
   letter-spacing: 3px;
   color: var(--text-dim);
+  font-weight: 700;
 }
 
 .hud-value {
   font-family: var(--font-display);
-  font-size: clamp(20px, 4.5vw, 28px);
-  font-weight: 800;
+  font-size: clamp(22px, 4.5vw, 30px);
+  font-weight: 700;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
@@ -102,14 +109,14 @@ body {
   }
   40% {
     transform: scale(1.25);
-    color: #fff;
+    color: var(--honey);
   }
   100% {
     transform: scale(1);
   }
 }
 
-/* ── 遊戲舞台 ─────────────────────── */
+/* ── 遊戲舞台：繪本畫框 ─────────────── */
 .stage-row {
   display: flex;
   gap: 12px;
@@ -120,13 +127,13 @@ body {
 
 .stage {
   position: relative;
-  border: 2px solid var(--border);
-  border-radius: 18px;
+  border: 3px solid var(--ink);
+  border-radius: 22px;
   overflow: hidden;
+  background: var(--night);
   box-shadow:
-    0 0 0 1px #00000088,
-    0 18px 50px #00000099,
-    inset 0 0 60px #1e1b4b55;
+    0 4px 0 rgba(59, 48, 36, 0.35),
+    0 14px 36px rgba(59, 48, 36, 0.25);
   height: 100%;
 }
 
@@ -146,14 +153,15 @@ body {
 }
 
 .next-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 16px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  box-shadow: 0 3px 0 rgba(59, 48, 36, 0.3);
 }
 
 #next {
@@ -164,7 +172,7 @@ body {
 .next-name {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-dim);
+  color: var(--ink-soft);
 }
 
 /* ── Combo 提示 ───────────────────── */
@@ -174,10 +182,14 @@ body {
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-display);
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--accent);
-  text-shadow: 0 2px 8px #000c;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f6eac9;
+  text-shadow:
+    2px 2px 0 var(--ink),
+    -1px -1px 0 var(--ink),
+    1px -1px 0 var(--ink),
+    -1px 1px 0 var(--ink);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
@@ -190,13 +202,13 @@ body {
 
 @keyframes combo-pop {
   0% {
-    transform: translateX(-50%) scale(0.5);
+    transform: translateX(-50%) scale(0.5) rotate(-4deg);
   }
   60% {
-    transform: translateX(-50%) scale(1.25);
+    transform: translateX(-50%) scale(1.25) rotate(3deg);
   }
   100% {
-    transform: translateX(-50%) scale(1);
+    transform: translateX(-50%) scale(1) rotate(0);
   }
 }
 
@@ -206,18 +218,20 @@ body {
   bottom: 18%;
   left: 50%;
   transform: translateX(-50%);
-  background: #15152eee;
-  border: 1px solid var(--border);
+  background: var(--card);
+  border: 2px solid var(--ink);
   border-radius: 14px;
   padding: 12px 20px;
   text-align: center;
   font-size: 15px;
   font-weight: 700;
   line-height: 1.7;
+  color: var(--ink);
   pointer-events: none;
   animation: tutorial-bob 2s ease-in-out infinite;
   transition: opacity 0.4s;
-  box-shadow: 0 8px 30px #000a;
+  box-shadow: 0 4px 0 rgba(59, 48, 36, 0.3);
+  max-width: 80%;
 }
 
 .tutorial.hidden {
@@ -238,8 +252,8 @@ body {
 .overlay {
   position: absolute;
   inset: 0;
-  background: #0b0b1ecc;
-  backdrop-filter: blur(6px);
+  background: rgba(59, 48, 36, 0.45);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -252,16 +266,17 @@ body {
 }
 
 .overlay-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--card);
+  border: 3px solid var(--ink);
   border-radius: 20px;
-  padding: 28px 36px;
+  padding: 26px 34px;
   text-align: center;
   display: flex;
   flex-direction: column;
   gap: 10px;
   animation: card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 24px 60px #000c;
+  box-shadow: 0 6px 0 rgba(59, 48, 36, 0.35);
+  color: var(--ink);
 }
 
 @keyframes card-in {
@@ -277,34 +292,32 @@ body {
 
 .overlay-card h2 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .overlay-score strong {
   color: var(--accent);
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 32px;
 }
 
 .overlay-sub {
-  color: var(--text-dim);
+  color: var(--ink-soft);
   font-size: 14px;
 }
 
-/* ── 按鈕 ─────────────────────────── */
+/* ── 按鈕：紙貼紙風 ────────────────── */
 .btn {
   font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 800;
-  color: #1c1917;
-  background: linear-gradient(180deg, #fde047, #fbbf24);
-  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--honey);
+  border: 2.5px solid var(--ink);
   border-radius: 999px;
-  padding: 12px 30px;
+  padding: 11px 28px;
   cursor: pointer;
-  box-shadow:
-    0 4px 0 #b45309,
-    0 8px 20px #0008;
+  box-shadow: 0 4px 0 var(--ink);
   transition:
     transform 0.08s,
     box-shadow 0.08s;
@@ -312,23 +325,15 @@ body {
 
 .btn:active {
   transform: translateY(3px);
-  box-shadow:
-    0 1px 0 #b45309,
-    0 4px 12px #0008;
+  box-shadow: 0 1px 0 var(--ink);
 }
 
 .btn-ghost {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  box-shadow: none;
-  padding: 10px 14px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 3px 0 rgba(59, 48, 36, 0.45);
+  padding: 9px 13px;
   font-size: 20px;
-}
-
-.btn-ghost:active {
-  transform: scale(0.94);
-  box-shadow: none;
 }
 
 .btn-lang {
@@ -336,7 +341,7 @@ body {
   font-family: var(--font-ui);
   font-weight: 700;
   letter-spacing: 1px;
-  color: var(--text-dim);
+  color: var(--ink-soft);
 }
 
 /* ── 進化圖鑑 ─────────────────────── */
