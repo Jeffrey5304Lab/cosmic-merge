@@ -117,6 +117,8 @@ body {
   display: block;
   height: 100%;
   cursor: crosshair;
+  /* 觸控拖曳瞄準時不能觸發頁面捲動 */
+  touch-action: none;
 }
 
 .side {
