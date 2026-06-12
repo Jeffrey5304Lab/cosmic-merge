@@ -49,3 +49,22 @@ export function addScore(entry: LeaderboardEntry): number | null {
   }
   return rank
 }
+
+/** 撤掉一筆成績（玩家復活續玩時，撤回剛記錄的那筆，避免同一局上榜兩次） */
+export function removeScore(entry: LeaderboardEntry): void {
+  const board = loadLeaderboard()
+  const i = board.findIndex(
+    e =>
+      e.score === entry.score &&
+      e.date === entry.date &&
+      e.mode === entry.mode &&
+      e.maxTier === entry.maxTier,
+  )
+  if (i < 0) return
+  board.splice(i, 1)
+  try {
+    localStorage.setItem(KEY, JSON.stringify(board))
+  } catch {
+    /* 私密模式忽略 */
+  }
+}

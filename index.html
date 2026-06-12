@@ -41,6 +41,7 @@
           <div id="mode-badge" class="mode-badge hidden">🗓️</div>
           <div id="combo" class="combo" aria-live="polite"></div>
           <div id="tutorial" class="tutorial hidden"><p id="tutorial-text"></p></div>
+          <div id="hint" class="tutorial hidden"><p id="hint-text"></p></div>
           <div id="gameover" class="overlay hidden">
             <div class="overlay-card">
               <p class="overlay-emoji" id="over-emoji">💫</p>
@@ -52,6 +53,7 @@
                 <ol id="board-list"></ol>
               </div>
               <div class="overlay-actions">
+                <button id="revive" class="btn btn-revive">💫 看廣告復活</button>
                 <button id="share" class="btn btn-secondary">📸 分享成績</button>
                 <button id="restart" class="btn">再來一局</button>
               </div>
@@ -64,6 +66,8 @@
             <canvas id="next" width="120" height="120"></canvas>
             <span id="next-name" class="next-name"></span>
           </div>
+          <button id="swap" class="btn btn-ghost" aria-label="換球">🔄</button>
+          <button id="hammer" class="btn btn-ghost" aria-label="小錘子">🔨<span id="hammer-count" class="count">1</span></button>
           <button id="mode" class="btn btn-ghost" aria-label="每日挑戰">🗓️</button>
           <button id="mute" class="btn btn-ghost" aria-label="切換音效">🔊</button>
           <button id="lang" class="btn btn-ghost btn-lang" aria-label="Language">EN</button>

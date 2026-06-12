@@ -68,6 +68,78 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.score).toBe(scoreAtEnd)
   })
 
+  it('復活：清掉上方星球、繼續本局、每局限一次', () => {
+    const { game, events } = makeGame()
+    const step = 1 / 60
+    let sinceDrop = 0
+    for (let t = 0; t < 150 && game.state !== 'over'; t += step) {
+      sinceDrop += step
+      if (sinceDrop >= 0.5) {
+        sinceDrop = 0
+        game.drop()
+      }
+      game.update(step)
+    }
+    expect(game.state).toBe('over')
+    const bodiesBefore = game.bodyCount
+    const scoreBefore = game.score
+
+    expect(game.revive()).toBe(true)
+    expect(game.state).toBe('playing')
+    expect(game.bodyCount).toBeLessThan(bodiesBefore)
+    expect(game.score).toBe(scoreBefore) // 分數保留
+
+    // 還能繼續玩
+    simulate(game, 5, 0.5)
+    expect(game.score).toBeGreaterThanOrEqual(scoreBefore)
+
+    // 再死一次不能再復活
+    for (let t = 0; t < 150 && game.state !== 'over'; t += step) {
+      sinceDrop += step
+      if (sinceDrop >= 0.5) {
+        sinceDrop = 0
+        game.drop()
+      }
+      game.update(step)
+    }
+    expect(game.state).toBe('over')
+    expect(game.revive()).toBe(false)
+    expect(events.gameOver).toBe(2)
+  })
+
+  it('小錘子 smash：敲掉一顆星球', () => {
+    const { game } = makeGame()
+    simulate(game, 6, 0.5)
+    const before = game.bodyCount
+    expect(before).toBeGreaterThan(0)
+    // 沿中央往上掃，敲到第一顆為止
+    let hit = false
+    for (let y = 640; y > 100 && !hit; y -= 20) {
+      hit = game.smash(230, y)
+    }
+    expect(hit).toBe(true)
+    expect(game.bodyCount).toBe(before - 1)
+  })
+
+  it('換球 swapNext：current 與 next 互換', () => {
+    let lastNext = -1
+    const cb: GameCallbacks = {
+      onScore() {},
+      onNext(tier) {
+        lastNext = tier
+      },
+      onCombo() {},
+      onGameOver() {},
+    }
+    const game = new Game(cb)
+    const nextBefore = lastNext
+    game.swapNext()
+    // 互換後 onNext 回報的應該是原本的 current（可能與 next 相同階級，至少 callback 有觸發）
+    expect(lastNext).toBeGreaterThanOrEqual(0)
+    game.swapNext()
+    expect(lastNext).toBe(nextBefore) // 換兩次回到原狀
+  })
+
   it('restart 重置分數與狀態，可以再玩', () => {
     const { game, events } = makeGame()
     simulate(game, 8, 0.5)

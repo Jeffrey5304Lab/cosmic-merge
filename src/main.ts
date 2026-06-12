@@ -6,7 +6,9 @@ import { isMuted, setMuted } from './audio'
 import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
 import { shareCard } from './sharecard'
 import { dailySeed, mulberry32 } from './logic'
-import { addScore, loadLeaderboard } from './leaderboard'
+import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
+import { ads } from './ads'
+import { addHammer, getHammers, useHammer } from './inventory'
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id)
@@ -150,11 +152,31 @@ const game = new Game({
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
     if (mode === 'daily') saveDailyBest(score)
-    lastRank = addScore({ score, maxTier, date: todayKey(), mode })
+    lastEntry = { score, maxTier, date: todayKey(), mode }
+    lastRank = addScore(lastEntry)
     lastResult = { score, best, maxTier }
+    reviveBtn.classList.toggle('hidden', game.reviveUsed || score === 0)
     renderGameOver()
     overlayEl.classList.remove('hidden')
   },
+})
+
+/* ── 復活（獎勵式廣告位） ── */
+const reviveBtn = $<HTMLButtonElement>('revive')
+let lastEntry: LeaderboardEntry | null = null
+
+reviveBtn.addEventListener('click', async () => {
+  reviveBtn.disabled = true
+  const watched = await ads.showRewarded('revive')
+  reviveBtn.disabled = false
+  if (!watched || !game.revive()) return
+  // 這局還沒結束：撤回剛記錄的排行榜成績，等真正結束再記
+  if (lastEntry) {
+    removeScore(lastEntry)
+    lastEntry = null
+  }
+  lastResult = null
+  overlayEl.classList.add('hidden')
 })
 
 /* ── 模式切換 ── */
@@ -177,6 +199,53 @@ modeBtn.addEventListener('click', () => {
   modeBtn.blur()
 })
 
+/* ── 道具：換球 + 小錘子 ── */
+const swapBtn = $<HTMLButtonElement>('swap')
+const hammerBtn = $<HTMLButtonElement>('hammer')
+const hammerCountEl = $<HTMLSpanElement>('hammer-count')
+const hintEl = $<HTMLDivElement>('hint')
+const hintTextEl = $<HTMLParagraphElement>('hint-text')
+let smashMode = false
+
+function refreshHammerCount() {
+  hammerCountEl.textContent = String(getHammers())
+}
+refreshHammerCount()
+
+function exitSmashMode() {
+  smashMode = false
+  hammerBtn.classList.remove('armed')
+  hintEl.classList.add('hidden')
+}
+
+swapBtn.addEventListener('click', () => {
+  game.swapNext()
+  swapBtn.blur()
+})
+
+hammerBtn.addEventListener('click', async () => {
+  hammerBtn.blur()
+  if (smashMode) {
+    exitSmashMode()
+    return
+  }
+  if (getHammers() > 0) {
+    smashMode = true
+    hammerBtn.classList.add('armed')
+    hintTextEl.textContent = t().hammerHint
+    hintEl.classList.remove('hidden')
+    return
+  }
+  // 沒庫存：看廣告拿一支
+  hammerBtn.disabled = true
+  const watched = await ads.showRewarded('hammer')
+  hammerBtn.disabled = false
+  if (watched) {
+    addHammer()
+    refreshHammerCount()
+  }
+})
+
 const shareBtn = $<HTMLButtonElement>('share')
 shareBtn.addEventListener('click', async () => {
   if (!lastResult) return
@@ -190,6 +259,8 @@ shareBtn.addEventListener('click', async () => {
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
   overlayEl.classList.add('hidden')
   lastResult = null
+  lastEntry = null
+  exitSmashMode()
   // 每日挑戰重開＝同一套今日序列
   game.restart(mode === 'daily' ? mulberry32(dailySeed()) : undefined)
 })
@@ -239,6 +310,10 @@ function applyI18n() {
   muteBtn.setAttribute('aria-label', d.mute)
   modeBtn.setAttribute('aria-label', d.daily)
   modeBadge.textContent = `🗓️ ${d.daily}`
+  reviveBtn.textContent = d.revive
+  swapBtn.setAttribute('aria-label', d.swap)
+  hammerBtn.setAttribute('aria-label', d.hammer)
+  if (smashMode) hintTextEl.textContent = d.hammerHint
   langBtn.textContent = d.langButton
   nextNameEl.textContent = planetName(lastNextTier)
   $('tutorial-text').innerHTML = d.tutorial
@@ -252,15 +327,32 @@ langBtn.addEventListener('click', () => {
 })
 onLangChange(applyI18n)
 
-/* ── 指標操作：移動瞄準、放開投放 ── */
+/* ── 指標操作：移動瞄準、放開投放（小錘子模式則是敲擊） ── */
 function toBoardX(clientX: number): number {
   const rect = canvas.getBoundingClientRect()
   return ((clientX - rect.left) / rect.width) * BOARD.width
 }
 
-canvas.addEventListener('pointerdown', e => game.aim(toBoardX(e.clientX)))
-canvas.addEventListener('pointermove', e => game.aim(toBoardX(e.clientX)))
+function toBoardY(clientY: number): number {
+  const rect = canvas.getBoundingClientRect()
+  return ((clientY - rect.top) / rect.height) * BOARD.height
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (!smashMode) game.aim(toBoardX(e.clientX))
+})
+canvas.addEventListener('pointermove', e => {
+  if (!smashMode) game.aim(toBoardX(e.clientX))
+})
 canvas.addEventListener('pointerup', e => {
+  if (smashMode) {
+    if (game.smash(toBoardX(e.clientX), toBoardY(e.clientY))) {
+      useHammer()
+      refreshHammerCount()
+      exitSmashMode()
+    }
+    return
+  }
   game.aim(toBoardX(e.clientX))
   game.drop()
   dismissTutorial()

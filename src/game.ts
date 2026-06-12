@@ -53,6 +53,8 @@ export class Game {
   score = 0
   best = loadBest()
   maxTierReached = 0
+  /** 每局限一次的復活是否已用掉 */
+  reviveUsed = false
 
   private engine = Engine.create()
   private meta = new WeakMap<Matter.Body, PlanetMeta>()
@@ -119,6 +121,54 @@ export class Game {
     return this.aimX
   }
 
+  /**
+   * 復活（獎勵式廣告的兌現）：清掉上方 45% 的星球，繼續本局。
+   * 每局限一次；成功回傳 true。
+   */
+  revive(): boolean {
+    if (this.state !== 'over' || this.reviveUsed) return false
+    this.reviveUsed = true
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (m && body.position.y < BOARD.height * 0.45) {
+        this.particles.burst(body.position.x, body.position.y, TIERS[m.tier].color, 8, 100)
+        Composite.remove(this.engine.world, body)
+      }
+    }
+    this.dangerTime = 0
+    this.dropCooldown = 0.3
+    this.state = 'playing'
+    return true
+  }
+
+  /** 小錘子：敲掉指定座標的星球，成功回傳 true */
+  smash(x: number, y: number): boolean {
+    if (this.state === 'over') return false
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (!m) continue
+      const r = TIERS[m.tier].radius
+      const dx = body.position.x - x
+      const dy = body.position.y - y
+      if (dx * dx + dy * dy <= r * r) {
+        this.particles.ring(body.position.x, body.position.y, TIERS[m.tier].color, r * 1.6)
+        this.particles.burst(body.position.x, body.position.y, TIERS[m.tier].color, 14, 160)
+        Composite.remove(this.engine.world, body)
+        playDrop()
+        return true
+      }
+    }
+    return false
+  }
+
+  /** 換球：current 和 next 互換（不影響種子序列，每日挑戰也公平） */
+  swapNext() {
+    if (this.state === 'over') return
+    ;[this.currentTier, this.nextDropTier] = [this.nextDropTier, this.currentTier]
+    this.aim(this.aimX) // 半徑變了，重新夾住範圍
+    this.cb.onNext(this.nextDropTier)
+  }
+
   /** 玩家瞄準（邏輯座標 x） */
   aim(x: number) {
     const r = TIERS[this.currentTier].radius
@@ -148,6 +198,7 @@ export class Game {
     this.maxTierReached = 0
     this.dangerTime = 0
     this.dropCooldown = 0
+    this.reviveUsed = false
     this.state = 'ready'
     this.currentTier = pickDropTier(this.rng)
     this.nextDropTier = pickDropTier(this.rng)
@@ -237,6 +288,15 @@ export class Game {
 
   get inDanger(): boolean {
     return this.dangerTime > 0
+  }
+
+  /** 場上星球數（不含牆），供測試與 debug */
+  get bodyCount(): number {
+    let n = 0
+    for (const body of Composite.allBodies(this.engine.world)) {
+      if (this.meta.has(body)) n++
+    }
+    return n
   }
 
   draw(g: CanvasRenderingContext2D) {

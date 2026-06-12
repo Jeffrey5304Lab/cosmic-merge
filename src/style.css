@@ -430,6 +430,104 @@ body {
   color: var(--ink-soft);
 }
 
+/* ── 道具按鈕計數角標 ─────────────── */
+.btn-ghost {
+  position: relative;
+}
+
+.btn-ghost .count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--accent);
+  color: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-ui);
+}
+
+.btn-ghost.armed {
+  background: var(--accent);
+  animation: armed-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes armed-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+/* ── 復活按鈕 ─────────────────────── */
+.btn-revive {
+  background: var(--accent);
+  color: var(--card);
+}
+
+.btn-revive.hidden {
+  display: none;
+}
+
+/* ── 模擬廣告畫面 ─────────────────── */
+.ad-mock {
+  position: fixed;
+  inset: 0;
+  background: rgba(59, 48, 36, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.ad-mock-box {
+  background: var(--card);
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  padding: 36px 60px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 6px 0 rgba(59, 48, 36, 0.4);
+}
+
+.ad-mock-tag {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  background: var(--honey);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 1px 7px;
+  color: var(--ink);
+}
+
+.ad-mock-title {
+  font-size: 44px;
+}
+
+.ad-mock-count {
+  font-family: var(--font-display);
+  font-size: 40px;
+  color: var(--accent);
+}
+
+.ad-mock-slot {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
 /* ── 進化圖鑑 ─────────────────────── */
 .evolution {
   display: flex;
