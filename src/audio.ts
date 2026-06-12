@@ -24,6 +24,7 @@ function loadMuted(): boolean {
 let muted = loadMuted()
 export function setMuted(m: boolean) {
   muted = m
+  if (musicGain) musicGain.gain.value = m ? 0 : 1
   try {
     localStorage.setItem(MUTE_KEY, m ? '1' : '0')
   } catch {
@@ -48,6 +49,91 @@ function blip(freq: number, duration: number, type: OscillatorType, gain: number
   osc.connect(g).connect(ac.destination)
   osc.start(t0)
   osc.stop(t0 + duration)
+}
+
+/* ══════════════ 生成式 lo-fi BGM（零音檔） ══════════════ */
+
+let musicStarted = false
+let musicGain: GainNode | null = null
+
+/** C 大調溫暖進行：Cmaj7 → Am7 → Fmaj7 → G7 */
+const CHORDS: number[][] = [
+  [261.63, 329.63, 392.0, 493.88],
+  [220.0, 261.63, 329.63, 392.0],
+  [174.61, 220.0, 261.63, 329.63],
+  [196.0, 246.94, 293.66, 349.23],
+]
+/** C 五聲音階（高八度），撥弦旋律用 */
+const PENTATONIC = [523.25, 587.33, 659.25, 783.99, 880.0]
+
+function scheduleChord(ac: AudioContext, out: AudioNode, freqs: number[], at: number, dur: number) {
+  // 和弦墊：慢起音正弦
+  for (const f of freqs) {
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = f
+    g.gain.setValueAtTime(0.0001, at)
+    g.gain.linearRampToValueAtTime(0.035, at + 1.1)
+    g.gain.setValueAtTime(0.035, at + dur - 1)
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur)
+    osc.connect(g).connect(out)
+    osc.start(at)
+    osc.stop(at + dur)
+  }
+  // 低音根音
+  const bass = ac.createOscillator()
+  const bg = ac.createGain()
+  bass.type = 'sine'
+  bass.frequency.value = freqs[0] / 2
+  bg.gain.setValueAtTime(0.0001, at)
+  bg.gain.linearRampToValueAtTime(0.05, at + 0.4)
+  bg.gain.exponentialRampToValueAtTime(0.0001, at + dur)
+  bass.connect(bg).connect(out)
+  bass.start(at)
+  bass.stop(at + dur)
+  // 偶爾的五聲音階撥弦（0～2 顆音）
+  const plucks = Math.floor(Math.random() * 3)
+  for (let i = 0; i < plucks; i++) {
+    const f = PENTATONIC[Math.floor(Math.random() * PENTATONIC.length)]
+    const t0 = at + 0.5 + Math.random() * (dur - 1.5)
+    const osc = ac.createOscillator()
+    const g = ac.createGain()
+    osc.type = 'triangle'
+    osc.frequency.value = f
+    g.gain.setValueAtTime(0.03, t0)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7)
+    osc.connect(g).connect(out)
+    osc.start(t0)
+    osc.stop(t0 + 0.7)
+  }
+}
+
+/** 啟動 BGM（需在使用者互動後呼叫，符合 autoplay 政策）；冪等 */
+export function startMusic() {
+  if (musicStarted) return
+  const ac = ensureCtx()
+  if (!ac) return
+  musicStarted = true
+
+  musicGain = ac.createGain()
+  musicGain.gain.value = muted ? 0 : 1
+  const filter = ac.createBiquadFilter()
+  filter.type = 'lowpass'
+  filter.frequency.value = 950 // lo-fi 悶悶的暖感
+  filter.connect(musicGain).connect(ac.destination)
+
+  const chordDur = 3.6
+  let bar = 0
+  let nextTime = ac.currentTime + 0.15
+  // lookahead 排程：每 600ms 往前排 1.2 秒
+  setInterval(() => {
+    while (nextTime < ac.currentTime + 1.2) {
+      scheduleChord(ac, filter, CHORDS[bar % CHORDS.length], nextTime, chordDur + 0.4)
+      bar++
+      nextTime += chordDur
+    }
+  }, 600)
 }
 
 /** 投放星球 */

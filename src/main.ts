@@ -2,7 +2,7 @@ import './style.css'
 import { Game } from './game'
 import { BOARD, TIERS } from './planets'
 import { drawPlanet } from './render'
-import { isMuted, setMuted } from './audio'
+import { isMuted, setMuted, startMusic } from './audio'
 import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
 import { shareCard } from './sharecard'
 import { dailySeed, mulberry32 } from './logic'
@@ -391,6 +391,10 @@ function renderChart() {
 }
 
 applyI18n()
+
+/* ── BGM：第一次互動後啟動（autoplay 政策） ── */
+window.addEventListener('pointerdown', () => startMusic(), { once: true })
+window.addEventListener('keydown', () => startMusic(), { once: true })
 
 /* ── 主迴圈 ── */
 let last = performance.now()
