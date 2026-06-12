@@ -345,7 +345,67 @@ function paintSurface(g: CanvasRenderingContext2D, tier: PlanetTier, r: number) 
 /* ══════════════ 星球本體（手繪紙剪風） ══════════════ */
 
 /**
- * 畫一顆 cozy 星球：抖動邊線 + 平塗色塊 + 紙剪陰影 + 墨水表情。
+ * Sprite 快取：身體 + 紙剪陰影 + 表面紋理 + 描邊都是靜態的，
+ * 每階級只渲染一次（2x 解析度），之後 drawImage 旋轉縮放，省掉每幀的 path/clip 成本。
+ */
+const SPRITE_RES = 2
+const spriteCache = new Map<number, HTMLCanvasElement>()
+
+function getPlanetSprite(tier: PlanetTier): HTMLCanvasElement | null {
+  const cached = spriteCache.get(tier.tier)
+  if (cached) return cached
+  if (typeof document === 'undefined') return null
+
+  const r = tier.radius
+  const seed = tier.tier * 3.7 + 1
+  const margin = 1.12 // 抖動邊線 + 描邊的餘裕
+  const size = Math.ceil(r * margin * 2 * SPRITE_RES)
+  const c = document.createElement('canvas')
+  c.width = c.height = size
+  const g = c.getContext('2d')
+  if (!g) return null
+  g.setTransform(SPRITE_RES, 0, 0, SPRITE_RES, size / 2, size / 2)
+
+  // 平塗主體（抖動邊線）
+  g.fillStyle = tier.color
+  wobblyCirclePath(g, r, seed)
+  g.fill()
+
+  // 紙剪陰影：clip 進主體，疊一層往右下偏的陰影色
+  g.save()
+  wobblyCirclePath(g, r, seed)
+  g.clip()
+  g.fillStyle = tier.edge
+  g.globalAlpha = 0.55
+  g.beginPath()
+  g.arc(-r * 0.16, -r * 0.18, r * 1.05, 0, Math.PI * 2)
+  // evenodd：填「主體扣掉偏移圓」之外的月牙
+  wobblyCirclePath(g, r * 1.4, seed)
+  g.fill('evenodd')
+  g.globalAlpha = 1
+  paintSurface(g, tier, r)
+  g.restore()
+
+  // 紙感高光：左上一小塊平塗白
+  g.globalAlpha = 0.5
+  g.fillStyle = '#FFF9EC'
+  g.beginPath()
+  g.ellipse(-r * 0.42, -r * 0.45, r * 0.2, r * 0.1, -0.7, 0, Math.PI * 2)
+  g.fill()
+  g.globalAlpha = 1
+
+  // 墨水描邊
+  g.strokeStyle = INK
+  g.lineWidth = Math.max(2, r * 0.055)
+  wobblyCirclePath(g, r, seed)
+  g.stroke()
+
+  spriteCache.set(tier.tier, c)
+  return c
+}
+
+/**
+ * 畫一顆 cozy 星球：sprite 本體 + 動態的環/光芒/墨水表情。
  * 表面跟著物理角度旋轉、表情永遠朝上。
  */
 export function drawPlanet(
@@ -401,39 +461,19 @@ export function drawPlanet(
 
   g.rotate(angle)
 
-  // 平塗主體（抖動邊線）
-  g.fillStyle = tier.color
-  wobblyCirclePath(g, r, seed)
-  g.fill()
-
-  // 紙剪陰影：clip 進主體，疊一層往右下偏的陰影色
-  g.save()
-  wobblyCirclePath(g, r, seed)
-  g.clip()
-  g.fillStyle = tier.edge
-  g.globalAlpha = 0.55
-  g.beginPath()
-  g.arc(-r * 0.16, -r * 0.18, r * 1.05, 0, Math.PI * 2)
-  // evenodd：填「主體扣掉偏移圓」之外的月牙
-  wobblyCirclePath(g, r * 1.4, seed)
-  g.fill('evenodd')
-  g.globalAlpha = 1
-  paintSurface(g, tier, r)
-  g.restore()
-
-  // 紙感高光：左上一小塊平塗白
-  g.globalAlpha = 0.5
-  g.fillStyle = '#FFF9EC'
-  g.beginPath()
-  g.ellipse(-r * 0.42, -r * 0.45, r * 0.2, r * 0.1, -0.7, 0, Math.PI * 2)
-  g.fill()
-  g.globalAlpha = 1
-
-  // 墨水描邊
-  g.strokeStyle = INK
-  g.lineWidth = Math.max(2, r * 0.055)
-  wobblyCirclePath(g, r, seed)
-  g.stroke()
+  const sprite = getPlanetSprite(tier)
+  if (sprite) {
+    const half = (sprite.width / SPRITE_RES / 2) * scale
+    g.drawImage(sprite, -half, -half, half * 2, half * 2)
+  } else {
+    // 無 DOM 環境的退路：直接平塗
+    g.fillStyle = tier.color
+    wobblyCirclePath(g, r, seed)
+    g.fill()
+    g.strokeStyle = INK
+    g.lineWidth = Math.max(2, r * 0.055)
+    g.stroke()
+  }
 
   g.rotate(-angle) // 臉永遠朝上
 

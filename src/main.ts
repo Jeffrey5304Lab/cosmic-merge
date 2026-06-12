@@ -174,6 +174,7 @@ function applyMode() {
 modeBtn.addEventListener('click', () => {
   mode = mode === 'daily' ? 'classic' : 'daily'
   applyMode()
+  modeBtn.blur()
 })
 
 const shareBtn = $<HTMLButtonElement>('share')
@@ -197,6 +198,7 @@ muteBtn.textContent = isMuted() ? '🔇' : '🔊'
 muteBtn.addEventListener('click', () => {
   setMuted(!isMuted())
   muteBtn.textContent = isMuted() ? '🔇' : '🔊'
+  muteBtn.blur() // 之後按空白鍵是投放，不是再切音效
 })
 
 /* ── 新手教學：第一次玩才顯示，投放後收起 ── */
@@ -244,7 +246,10 @@ function applyI18n() {
   renderGameOver()
 }
 
-langBtn.addEventListener('click', toggleLang)
+langBtn.addEventListener('click', () => {
+  toggleLang()
+  langBtn.blur()
+})
 onLangChange(applyI18n)
 
 /* ── 指標操作：移動瞄準、放開投放 ── */
