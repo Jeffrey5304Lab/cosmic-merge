@@ -19,9 +19,23 @@ export interface FloatingText {
   color: string
 }
 
+export interface Shockwave {
+  x: number
+  y: number
+  maxR: number
+  life: number
+  maxLife: number
+  color: string
+}
+
 export class ParticleSystem {
   particles: Particle[] = []
   texts: FloatingText[] = []
+  waves: Shockwave[] = []
+
+  ring(x: number, y: number, color: string, maxR: number) {
+    this.waves.push({ x, y, maxR, life: 0, maxLife: 0.45, color })
+  }
 
   burst(x: number, y: number, color: string, count: number, speed: number) {
     for (let i = 0; i < count; i++) {
@@ -58,9 +72,21 @@ export class ParticleSystem {
       t.y -= 50 * dt
     }
     this.texts = this.texts.filter(t => t.life < t.maxLife)
+    for (const w of this.waves) w.life += dt
+    this.waves = this.waves.filter(w => w.life < w.maxLife)
   }
 
   draw(g: CanvasRenderingContext2D) {
+    for (const w of this.waves) {
+      const progress = w.life / w.maxLife
+      g.globalAlpha = (1 - progress) * 0.7
+      g.strokeStyle = w.color
+      g.lineWidth = 3 + (1 - progress) * 4
+      g.beginPath()
+      g.arc(w.x, w.y, w.maxR * easeOutCubic(progress), 0, Math.PI * 2)
+      g.stroke()
+    }
+    g.globalAlpha = 1
     for (const p of this.particles) {
       const alpha = 1 - p.life / p.maxLife
       g.globalAlpha = alpha
@@ -83,4 +109,8 @@ export class ParticleSystem {
     }
     g.globalAlpha = 1
   }
+}
+
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3)
 }

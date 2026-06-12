@@ -2,7 +2,15 @@ import Matter from 'matter-js'
 import { BOARD, MAX_TIER, TIERS } from './planets'
 import { ComboTracker, mergeScore, nextTier, pickDropTier } from './logic'
 import { ParticleSystem } from './particles'
-import { drawAimLine, drawBackground, drawLoseLine, drawPlanet, makeStars } from './render'
+import {
+  drawAimLine,
+  drawBackground,
+  drawDangerVignette,
+  drawLoseLine,
+  drawPlanet,
+  makeStars,
+  ShootingStars,
+} from './render'
 import { playDrop, playFanfare, playGameOver, playMerge } from './audio'
 
 const { Engine, Bodies, Body, Composite, Events } = Matter
@@ -50,6 +58,7 @@ export class Game {
   private meta = new WeakMap<Matter.Body, PlanetMeta>()
   private particles = new ParticleSystem()
   private stars = makeStars(70)
+  private meteors = new ShootingStars()
   private combo = new ComboTracker()
   private time = 0
   private currentTier = pickDropTier()
@@ -148,6 +157,7 @@ export class Game {
       this.checkGameOver(dt)
     }
     this.particles.update(dt)
+    this.meteors.update(dt, this.time)
   }
 
   private processMerges() {
@@ -178,6 +188,7 @@ export class Game {
       }
 
       const tierDef = TIERS[result]
+      this.particles.ring(mx, my, tierDef.color, tierDef.radius * 2.2)
       this.particles.burst(mx, my, tierDef.color, 10 + result * 3, 120 + result * 25)
       this.particles.float(mx, my - tierDef.radius, `+${gained}${multiplier > 1 ? ` ×${multiplier}` : ''}`, '#FDE047')
       this.shake = Math.min(6, 1 + result * 0.5)
@@ -220,7 +231,11 @@ export class Game {
       g.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake)
     }
     drawBackground(g, this.stars, this.time)
+    this.meteors.draw(g)
     drawLoseLine(g, this.time, this.inDanger)
+    if (this.inDanger) {
+      drawDangerVignette(g, this.time, Math.min(1, this.dangerTime / 1.2 + 0.4))
+    }
 
     if (this.state !== 'over') {
       drawAimLine(g, this.aimX)
