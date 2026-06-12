@@ -265,10 +265,10 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   game.restart(mode === 'daily' ? mulberry32(dailySeed()) : undefined)
 })
 
-muteBtn.textContent = isMuted() ? '🔇' : '🔊'
+muteBtn.classList.toggle('muted', isMuted())
 muteBtn.addEventListener('click', () => {
   setMuted(!isMuted())
-  muteBtn.textContent = isMuted() ? '🔇' : '🔊'
+  muteBtn.classList.toggle('muted', isMuted())
   muteBtn.blur() // 之後按空白鍵是投放，不是再切音效
 })
 

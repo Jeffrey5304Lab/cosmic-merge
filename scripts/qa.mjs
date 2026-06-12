@@ -101,13 +101,17 @@ const errors = []
 
   /* ═══ 3. 偏好持久化：靜音 / 語言 / 最佳分數 ═══ */
   await page.locator('#mute').click()
-  const mutedIcon = await page.locator('#mute').textContent()
+  const mutedState = await page.locator('#mute').evaluate(el => el.classList.contains('muted'))
   await page.locator('#lang').click()
   await page.waitForTimeout(200)
   const langAfterToggle = await page.evaluate(() => document.documentElement.lang)
   await page.reload({ waitUntil: 'networkidle' })
   await page.waitForTimeout(400)
-  check('靜音設定重載後保留', (await page.locator('#mute').textContent()) === mutedIcon, mutedIcon ?? '')
+  check(
+    '靜音設定重載後保留',
+    (await page.locator('#mute').evaluate(el => el.classList.contains('muted'))) === mutedState,
+    `muted=${mutedState}`,
+  )
   check('語言設定重載後保留', (await page.evaluate(() => document.documentElement.lang)) === langAfterToggle, langAfterToggle)
 
   // 玩出分數 → 重載 → 最佳分數保留

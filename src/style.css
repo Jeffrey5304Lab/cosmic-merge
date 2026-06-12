@@ -422,11 +422,42 @@ body {
   font-size: 20px;
 }
 
+/* 手繪墨線圖示按鈕 */
+.btn-icon {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.btn-icon svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#mute .icon-sound-off,
+#mute.muted .icon-sound-on {
+  display: none;
+}
+
+#mute.muted .icon-sound-off {
+  display: block;
+}
+
 .btn-lang {
+  width: 46px;
+  height: 46px;
+  padding: 0;
   font-size: 14px;
   font-family: var(--font-ui);
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   color: var(--ink-soft);
 }
 
