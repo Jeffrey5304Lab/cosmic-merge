@@ -13,6 +13,13 @@ describe('TIERS 設定', () => {
     TIERS.forEach((t, i) => expect(t.tier).toBe(i))
   })
 
+  it('每一階都有中英文名稱（i18n 完整性）', () => {
+    for (const t of TIERS) {
+      expect(t.name.length).toBeGreaterThan(0)
+      expect(t.nameEn.length).toBeGreaterThan(0)
+    }
+  })
+
   it('最大星球（太陽）放得進場地', () => {
     expect(TIERS[MAX_TIER].radius * 2).toBeLessThan(BOARD.width)
   })

@@ -3,6 +3,7 @@ import { Game } from './game'
 import { BOARD, TIERS } from './planets'
 import { drawPlanet } from './render'
 import { isMuted, setMuted } from './audio'
+import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id)
@@ -20,9 +21,12 @@ const comboEl = $<HTMLDivElement>('combo')
 const nextCanvas = $<HTMLCanvasElement>('next')
 const nextNameEl = $<HTMLSpanElement>('next-name')
 const overlayEl = $<HTMLDivElement>('gameover')
-const finalScoreEl = $<HTMLElement>('final-score')
+const overTitleEl = $<HTMLHeadingElement>('over-title')
+const overScoreEl = $<HTMLParagraphElement>('over-score')
 const overSubEl = $<HTMLParagraphElement>('over-sub')
 const overEmojiEl = $<HTMLParagraphElement>('over-emoji')
+const langBtn = $<HTMLButtonElement>('lang')
+const muteBtn = $<HTMLButtonElement>('mute')
 
 const dpr = Math.min(window.devicePixelRatio || 1, 2)
 canvas.width = BOARD.width * dpr
@@ -30,14 +34,16 @@ canvas.height = BOARD.height * dpr
 ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
 /* ── 下一顆預覽 ── */
+let lastNextTier = 0
 function renderNext(tier: number) {
-  const t = TIERS[tier]
+  lastNextTier = tier
+  const def = TIERS[tier]
   const g = nextCanvas.getContext('2d')
   if (!g) return
   g.clearRect(0, 0, 120, 120)
-  const scale = Math.min(1, 44 / t.radius)
-  drawPlanet(g, t, 60, 60, 0, scale)
-  nextNameEl.textContent = t.name
+  const scale = Math.min(1, 44 / def.radius)
+  drawPlanet(g, def, 60, 60, 0, scale)
+  nextNameEl.textContent = planetName(tier)
 }
 
 /* ── Combo 提示 ── */
@@ -52,36 +58,75 @@ function showCombo(multiplier: number) {
   comboTimer = window.setTimeout(() => comboEl.classList.remove('show'), 1200)
 }
 
+/* ── 分數跳動 ── */
+function popValue(el: HTMLElement, value: number) {
+  if (el.textContent !== String(value)) {
+    el.textContent = String(value)
+    el.classList.remove('pop')
+    void el.offsetWidth
+    el.classList.add('pop')
+  }
+}
+
+/* ── 結算內容（語言切換時需要重畫） ── */
+let lastResult: { score: number; best: number; maxTier: number } | null = null
+function renderGameOver() {
+  if (!lastResult) return
+  const { score, best, maxTier } = lastResult
+  const name = planetName(maxTier)
+  overTitleEl.textContent = t().overTitle
+  overScoreEl.innerHTML = t().overScore(score)
+  overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
+  overSubEl.textContent =
+    score >= best && score > 0 ? t().overNewRecord(name) : t().overNormal(name, best)
+}
+
 /* ── 遊戲實例 ── */
 const game = new Game({
   onScore(score, best) {
-    scoreEl.textContent = String(score)
+    popValue(scoreEl, score)
     bestEl.textContent = String(best)
   },
   onNext: renderNext,
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
-    finalScoreEl.textContent = String(score)
-    const t = TIERS[maxTier]
-    overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
-    overSubEl.textContent =
-      score >= best && score > 0
-        ? `🏆 新紀錄！最高合成到「${t.name}」`
-        : `最高合成到「${t.name}」，最佳紀錄 ${best} 分`
+    lastResult = { score, best, maxTier }
+    renderGameOver()
     overlayEl.classList.remove('hidden')
   },
 })
 
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
   overlayEl.classList.add('hidden')
+  lastResult = null
   game.restart()
 })
 
-const muteBtn = $<HTMLButtonElement>('mute')
 muteBtn.addEventListener('click', () => {
   setMuted(!isMuted())
   muteBtn.textContent = isMuted() ? '🔇' : '🔊'
 })
+
+/* ── 多語系 ── */
+function applyI18n() {
+  const d = t()
+  document.documentElement.lang = getLang()
+  document.title = d.docTitle
+  $('title-1').textContent = d.title1
+  $('title-2').textContent = d.title2
+  $('label-score').textContent = d.score
+  $('label-best').textContent = d.best
+  $('label-next').textContent = d.next
+  $('label-evolution').textContent = d.evolution
+  muteBtn.setAttribute('aria-label', d.mute)
+  langBtn.textContent = d.langButton
+  nextNameEl.textContent = planetName(lastNextTier)
+  renderChart()
+  renderGameOver()
+}
+
+langBtn.addEventListener('click', toggleLang)
+onLangChange(applyI18n)
 
 /* ── 指標操作：移動瞄準、放開投放 ── */
 function toBoardX(clientX: number): number {
@@ -101,17 +146,19 @@ function renderChart() {
   const chart = $<HTMLCanvasElement>('chart')
   const g = chart.getContext('2d')
   if (!g) return
+  g.clearRect(0, 0, chart.width, chart.height)
   const w = chart.width / TIERS.length
-  TIERS.forEach((t, i) => {
-    const scale = Math.min(1, (10 + i * 1.6) / t.radius)
-    drawPlanet(g, t, w * i + w / 2, 30, 0, scale)
+  TIERS.forEach((def, i) => {
+    const scale = Math.min(1, (10 + i * 1.6) / def.radius)
+    drawPlanet(g, def, w * i + w / 2, 30, 0, scale)
     g.fillStyle = '#94A3B8'
     g.font = "10px 'Noto Sans TC', sans-serif"
     g.textAlign = 'center'
-    g.fillText(t.name, w * i + w / 2, 64)
+    g.fillText(planetName(i), w * i + w / 2, 64)
   })
 }
-renderChart()
+
+applyI18n()
 
 /* ── 主迴圈 ── */
 let last = performance.now()

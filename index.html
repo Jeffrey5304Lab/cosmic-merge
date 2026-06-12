@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#0B0B1E" />
     <title>宇宙合併 Cosmic Merge</title>
-    <meta name="description" content="把可愛星球丟進太空艙，同星球合體升級，從隕石合到太陽！" />
+    <meta name="description" content="把可愛星球丟進太空艙，同星球合體升級，從隕石合到太陽！Drop cute chibi planets and merge your way from Meteor to the Sun!" />
+    <meta property="og:title" content="Cosmic Merge 宇宙合併" />
+    <meta property="og:description" content="Suika-style physics merge game with cute chibi planets. Merge from Meteor to the Sun!" />
+    <meta property="og:type" content="website" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -18,12 +21,12 @@
     <div id="app">
       <header class="hud">
         <div class="hud-block">
-          <span class="hud-label">分數</span>
+          <span id="label-score" class="hud-label">分數</span>
           <span id="score" class="hud-value">0</span>
         </div>
-        <h1 class="title">宇宙<span>合併</span></h1>
+        <h1 class="title"><span id="title-1">宇宙</span><span id="title-2" class="title-accent">合併</span></h1>
         <div class="hud-block hud-right">
-          <span class="hud-label">最佳</span>
+          <span id="label-best" class="hud-label">最佳</span>
           <span id="best" class="hud-value">0</span>
         </div>
       </header>
@@ -35,8 +38,8 @@
           <div id="gameover" class="overlay hidden">
             <div class="overlay-card">
               <p class="overlay-emoji" id="over-emoji">💫</p>
-              <h2>宇宙打烊了！</h2>
-              <p class="overlay-score">本局 <strong id="final-score">0</strong> 分</p>
+              <h2 id="over-title">宇宙打烊了！</h2>
+              <p class="overlay-score" id="over-score"></p>
               <p class="overlay-sub" id="over-sub"></p>
               <button id="restart" class="btn">再來一局</button>
             </div>
@@ -44,16 +47,17 @@
         </div>
         <aside class="side">
           <div class="next-card">
-            <span class="hud-label">下一顆</span>
+            <span id="label-next" class="hud-label">下一顆</span>
             <canvas id="next" width="120" height="120"></canvas>
             <span id="next-name" class="next-name"></span>
           </div>
           <button id="mute" class="btn btn-ghost" aria-label="切換音效">🔊</button>
+          <button id="lang" class="btn btn-ghost btn-lang" aria-label="Language">EN</button>
         </aside>
       </div>
 
       <footer class="evolution">
-        <span class="hud-label">進化圖鑑</span>
+        <span id="label-evolution" class="hud-label">進化圖鑑</span>
         <canvas id="chart" width="640" height="72"></canvas>
       </footer>
     </div>

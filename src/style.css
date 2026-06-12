@@ -64,7 +64,7 @@ body {
   text-shadow: 0 0 24px #a78bfa88;
 }
 
-.title span {
+.title-accent {
   color: var(--accent);
 }
 
@@ -90,6 +90,23 @@ body {
   font-weight: 800;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
+}
+
+.hud-value.pop {
+  animation: value-pop 0.3s ease-out;
+}
+
+@keyframes value-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+    color: #fff;
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* ── 遊戲舞台 ─────────────────────── */
@@ -278,6 +295,14 @@ body {
 .btn-ghost:active {
   transform: scale(0.94);
   box-shadow: none;
+}
+
+.btn-lang {
+  font-size: 14px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-dim);
 }
 
 /* ── 進化圖鑑 ─────────────────────── */
