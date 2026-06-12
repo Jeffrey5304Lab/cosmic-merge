@@ -30,7 +30,13 @@ export function nextTier(tier: number): number | null {
 export class ComboTracker {
   private lastMergeAt = -Infinity
   private chain = 0
-  constructor(private windowMs = 1500, private maxMultiplier = 8) {}
+  private windowMs: number
+  private maxMultiplier: number
+
+  constructor(windowMs = 1500, maxMultiplier = 8) {
+    this.windowMs = windowMs
+    this.maxMultiplier = maxMultiplier
+  }
 
   /** 回報一次合成，回傳本次倍率 */
   hit(now: number): number {

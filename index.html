@@ -1,13 +1,62 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>cosmic-merge</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0B0B1E" />
+    <title>宇宙合併 Cosmic Merge</title>
+    <meta name="description" content="把可愛星球丟進太空艙，同星球合體升級，從隕石合到太陽！" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Noto+Sans+TC:wght@500;700;900&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <header class="hud">
+        <div class="hud-block">
+          <span class="hud-label">分數</span>
+          <span id="score" class="hud-value">0</span>
+        </div>
+        <h1 class="title">宇宙<span>合併</span></h1>
+        <div class="hud-block hud-right">
+          <span class="hud-label">最佳</span>
+          <span id="best" class="hud-value">0</span>
+        </div>
+      </header>
+
+      <div class="stage-row">
+        <div id="stage" class="stage">
+          <canvas id="game"></canvas>
+          <div id="combo" class="combo" aria-live="polite"></div>
+          <div id="gameover" class="overlay hidden">
+            <div class="overlay-card">
+              <p class="overlay-emoji" id="over-emoji">💫</p>
+              <h2>宇宙打烊了！</h2>
+              <p class="overlay-score">本局 <strong id="final-score">0</strong> 分</p>
+              <p class="overlay-sub" id="over-sub"></p>
+              <button id="restart" class="btn">再來一局</button>
+            </div>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="next-card">
+            <span class="hud-label">下一顆</span>
+            <canvas id="next" width="120" height="120"></canvas>
+            <span id="next-name" class="next-name"></span>
+          </div>
+          <button id="mute" class="btn btn-ghost" aria-label="切換音效">🔊</button>
+        </aside>
+      </div>
+
+      <footer class="evolution">
+        <span class="hud-label">進化圖鑑</span>
+        <canvas id="chart" width="640" height="72"></canvas>
+      </footer>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

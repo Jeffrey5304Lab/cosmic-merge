@@ -60,7 +60,10 @@ export class Game {
   private shake = 0
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
 
-  constructor(private cb: GameCallbacks) {
+  private cb: GameCallbacks
+
+  constructor(cb: GameCallbacks) {
+    this.cb = cb
     this.engine.gravity.y = 1.1
     this.buildWalls()
     Events.on(this.engine, 'collisionStart', e => {

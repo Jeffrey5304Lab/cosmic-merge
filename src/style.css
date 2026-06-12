@@ -1,0 +1,335 @@
+:root {
+  --bg: #0b0b1e;
+  --surface: #15152e;
+  --border: #2a2a4a;
+  --text: #f1f5f9;
+  --text-dim: #94a3b8;
+  --accent: #fde047;
+  --accent-2: #a78bfa;
+  --danger: #f87171;
+  --font-ui: 'Noto Sans TC', system-ui, sans-serif;
+  --font-display: 'Baloo 2', 'Noto Sans TC', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 70% -10%, #1e1b4b66, transparent),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  width: 100%;
+  max-width: 720px;
+  height: 100dvh;
+}
+
+/* ── HUD ───────────────────────────── */
+.hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 620px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-shadow: 0 0 24px #a78bfa88;
+}
+
+.title span {
+  color: var(--accent);
+}
+
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+
+.hud-right {
+  align-items: flex-end;
+}
+
+.hud-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+}
+
+.hud-value {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 4.5vw, 28px);
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 遊戲舞台 ─────────────────────── */
+.stage-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+}
+
+.stage {
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px #00000088,
+    0 18px 50px #00000099,
+    inset 0 0 60px #1e1b4b55;
+  height: 100%;
+}
+
+#game {
+  display: block;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.next-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+#next {
+  width: 72px;
+  height: 72px;
+}
+
+.next-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* ── Combo 提示 ───────────────────── */
+.combo {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 2px 8px #000c;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.combo.show {
+  opacity: 1;
+  animation: combo-pop 0.35s ease-out;
+}
+
+@keyframes combo-pop {
+  0% {
+    transform: translateX(-50%) scale(0.5);
+  }
+  60% {
+    transform: translateX(-50%) scale(1.25);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* ── 結算 Overlay ─────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: #0b0b1ecc;
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s;
+}
+
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.overlay-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 36px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 24px 60px #000c;
+}
+
+@keyframes card-in {
+  from {
+    transform: translateY(24px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+.overlay-emoji {
+  font-size: 44px;
+}
+
+.overlay-card h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+
+.overlay-score strong {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 30px;
+}
+
+.overlay-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* ── 按鈕 ─────────────────────────── */
+.btn {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: #1c1917;
+  background: linear-gradient(180deg, #fde047, #fbbf24);
+  border: none;
+  border-radius: 999px;
+  padding: 12px 30px;
+  cursor: pointer;
+  box-shadow:
+    0 4px 0 #b45309,
+    0 8px 20px #0008;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+
+.btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #b45309,
+    0 4px 12px #0008;
+}
+
+.btn-ghost {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  padding: 10px 14px;
+  font-size: 20px;
+}
+
+.btn-ghost:active {
+  transform: scale(0.94);
+  box-shadow: none;
+}
+
+/* ── 進化圖鑑 ─────────────────────── */
+.evolution {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  max-width: 620px;
+}
+
+#chart {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+}
+
+/* ── 手機直向：側欄收進舞台上方 ───── */
+@media (max-width: 560px) {
+  .stage-row {
+    flex-direction: column-reverse;
+    align-items: center;
+    width: 100%;
+  }
+
+  .side {
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .next-card {
+    flex-direction: row;
+    padding: 6px 12px;
+  }
+
+  #next {
+    width: 44px;
+    height: 44px;
+  }
+
+  .stage {
+    width: 100%;
+    height: auto;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  #game {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+  }
+}
