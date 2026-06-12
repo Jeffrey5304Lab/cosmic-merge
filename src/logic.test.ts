@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ComboTracker, mergeScore, nextTier, pickDropTier } from './logic'
+import { ComboTracker, dailySeed, hashString, mergeScore, mulberry32, nextTier, pickDropTier } from './logic'
 import { BOARD, DROPPABLE_TIERS, MAX_TIER, TIERS } from './planets'
 
 describe('TIERS 設定', () => {
@@ -80,6 +80,37 @@ describe('pickDropTier', () => {
     }
     for (let i = 0; i < 10000; i++) counts[pickDropTier(rng)]++
     expect(counts[0]).toBeGreaterThan(counts[DROPPABLE_TIERS - 1])
+  })
+})
+
+describe('每日挑戰種子', () => {
+  it('同種子 → 同星球序列（決定性）', () => {
+    const a = mulberry32(12345)
+    const b = mulberry32(12345)
+    const seqA = Array.from({ length: 20 }, () => pickDropTier(a))
+    const seqB = Array.from({ length: 20 }, () => pickDropTier(b))
+    expect(seqA).toEqual(seqB)
+  })
+
+  it('不同日期 → 不同種子', () => {
+    expect(dailySeed(new Date('2026-06-12T10:00:00'))).not.toBe(
+      dailySeed(new Date('2026-06-13T10:00:00')),
+    )
+  })
+
+  it('同一天不同時間 → 同種子', () => {
+    expect(dailySeed(new Date('2026-06-12T00:01:00'))).toBe(
+      dailySeed(new Date('2026-06-12T23:59:00')),
+    )
+  })
+
+  it('mulberry32 輸出落在 [0, 1)', () => {
+    const rng = mulberry32(hashString('test'))
+    for (let i = 0; i < 1000; i++) {
+      const v = rng()
+      expect(v).toBeGreaterThanOrEqual(0)
+      expect(v).toBeLessThan(1)
+    }
   })
 })
 

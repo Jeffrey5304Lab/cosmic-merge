@@ -175,6 +175,30 @@ body {
   color: var(--ink-soft);
 }
 
+/* ── 每日挑戰標記 ─────────────────── */
+.mode-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: var(--honey);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ink);
+  box-shadow: 0 2px 0 rgba(59, 48, 36, 0.4);
+  pointer-events: none;
+}
+
+.mode-badge.hidden {
+  display: none;
+}
+
+.btn-ghost.active {
+  background: var(--honey);
+}
+
 /* ── Combo 提示 ───────────────────── */
 .combo {
   position: absolute;

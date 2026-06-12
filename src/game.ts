@@ -61,8 +61,8 @@ export class Game {
   private meteors = new ShootingStars()
   private combo = new ComboTracker()
   private time = 0
-  private currentTier = pickDropTier()
-  private nextDropTier = pickDropTier()
+  private currentTier: number
+  private nextDropTier: number
   private aimX = BOARD.width / 2
   private dropCooldown = 0
   private dangerTime = 0
@@ -70,9 +70,13 @@ export class Game {
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
 
   private cb: GameCallbacks
+  private rng: () => number
 
-  constructor(cb: GameCallbacks) {
+  constructor(cb: GameCallbacks, rng: () => number = Math.random) {
     this.cb = cb
+    this.rng = rng
+    this.currentTier = pickDropTier(this.rng)
+    this.nextDropTier = pickDropTier(this.rng)
     this.engine.gravity.y = 1.1
     this.buildWalls()
     Events.on(this.engine, 'collisionStart', e => {
@@ -128,13 +132,15 @@ export class Game {
     this.spawnPlanet(this.currentTier, this.aimX, BOARD.dropY)
     playDrop()
     this.currentTier = this.nextDropTier
-    this.nextDropTier = pickDropTier()
+    this.nextDropTier = pickDropTier(this.rng)
     this.aim(this.aimX) // 依新星球半徑重新夾住範圍
     this.cb.onNext(this.nextDropTier)
     this.dropCooldown = 0.45
   }
 
-  restart() {
+  /** 重新開始；傳入 rng 可切換模式（每日挑戰＝種子序列） */
+  restart(rng?: () => number) {
+    if (rng) this.rng = rng
     Composite.clear(this.engine.world, false)
     this.buildWalls()
     this.mergeQueue = []
@@ -143,8 +149,8 @@ export class Game {
     this.dangerTime = 0
     this.dropCooldown = 0
     this.state = 'ready'
-    this.currentTier = pickDropTier()
-    this.nextDropTier = pickDropTier()
+    this.currentTier = pickDropTier(this.rng)
+    this.nextDropTier = pickDropTier(this.rng)
     this.combo = new ComboTracker()
     this.cb.onNext(this.nextDropTier)
     this.cb.onScore(this.score, this.best)

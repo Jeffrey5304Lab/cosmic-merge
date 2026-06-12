@@ -23,6 +23,8 @@ interface Dict {
   restart: string
   share: string
   shareDone: string
+  daily: string
+  dailyBest: (score: number) => string
   /** 語言切換鈕顯示「切過去的語言」 */
   langButton: string
   tutorial: string
@@ -45,6 +47,8 @@ const dicts: Record<Lang, Dict> = {
     restart: '再來一局',
     share: '📸 分享成績',
     shareDone: '✓ 已產生圖卡',
+    daily: '每日挑戰',
+    dailyBest: s => `今日最佳 ${s} 分`,
     langButton: 'EN',
     tutorial: '👆 拖曳瞄準・放開投放<br>相同星球會合體升級！',
   },
@@ -64,6 +68,8 @@ const dicts: Record<Lang, Dict> = {
     restart: 'Play Again',
     share: '📸 Share Score',
     shareDone: '✓ Card saved',
+    daily: 'Daily Challenge',
+    dailyBest: s => `Today's best: ${s}`,
     langButton: '中文',
     tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
   },

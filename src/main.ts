@@ -5,6 +5,7 @@ import { drawPlanet } from './render'
 import { isMuted, setMuted } from './audio'
 import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
 import { shareCard } from './sharecard'
+import { dailySeed, mulberry32 } from './logic'
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id)
@@ -78,23 +79,71 @@ function renderGameOver() {
   overTitleEl.textContent = t().overTitle
   overScoreEl.innerHTML = t().overScore(score)
   overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
-  overSubEl.textContent =
-    score >= best && score > 0 ? t().overNewRecord(name) : t().overNormal(name, best)
+  let sub = score >= best && score > 0 ? t().overNewRecord(name) : t().overNormal(name, best)
+  if (mode === 'daily') sub += `・${t().dailyBest(Math.max(getDailyBest(), score))}`
+  overSubEl.textContent = sub
+}
+
+/* ── 模式：經典 / 每日挑戰 ── */
+type Mode = 'classic' | 'daily'
+let mode: Mode = 'classic'
+
+function todayKey(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function getDailyBest(): number {
+  try {
+    return Number(localStorage.getItem(`cosmic-merge:daily-best:${todayKey()}`)) || 0
+  } catch {
+    return 0
+  }
+}
+
+function saveDailyBest(score: number) {
+  try {
+    const key = `cosmic-merge:daily-best:${todayKey()}`
+    if (score > getDailyBest()) localStorage.setItem(key, String(score))
+  } catch {
+    /* 私密模式忽略 */
+  }
 }
 
 /* ── 遊戲實例 ── */
 const game = new Game({
   onScore(score, best) {
     popValue(scoreEl, score)
-    bestEl.textContent = String(best)
+    // 每日挑戰模式：最佳欄顯示今日最佳
+    bestEl.textContent = String(mode === 'daily' ? Math.max(getDailyBest(), score) : best)
   },
   onNext: renderNext,
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
+    if (mode === 'daily') saveDailyBest(score)
     lastResult = { score, best, maxTier }
     renderGameOver()
     overlayEl.classList.remove('hidden')
   },
+})
+
+/* ── 模式切換 ── */
+const modeBtn = $<HTMLButtonElement>('mode')
+const modeBadge = $<HTMLDivElement>('mode-badge')
+
+function applyMode() {
+  modeBtn.classList.toggle('active', mode === 'daily')
+  modeBadge.classList.toggle('hidden', mode !== 'daily')
+  modeBadge.textContent = `🗓️ ${t().daily}`
+  overlayEl.classList.add('hidden')
+  lastResult = null
+  // 每日挑戰：日期種子 → 全世界今天同一套星球序列
+  game.restart(mode === 'daily' ? mulberry32(dailySeed()) : Math.random)
+}
+
+modeBtn.addEventListener('click', () => {
+  mode = mode === 'daily' ? 'classic' : 'daily'
+  applyMode()
 })
 
 const shareBtn = $<HTMLButtonElement>('share')
@@ -110,7 +159,8 @@ shareBtn.addEventListener('click', async () => {
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
   overlayEl.classList.add('hidden')
   lastResult = null
-  game.restart()
+  // 每日挑戰重開＝同一套今日序列
+  game.restart(mode === 'daily' ? mulberry32(dailySeed()) : undefined)
 })
 
 muteBtn.textContent = isMuted() ? '🔇' : '🔊'
@@ -155,6 +205,8 @@ function applyI18n() {
   shareBtn.textContent = d.share
   $<HTMLButtonElement>('restart').textContent = d.restart
   muteBtn.setAttribute('aria-label', d.mute)
+  modeBtn.setAttribute('aria-label', d.daily)
+  modeBadge.textContent = `🗓️ ${d.daily}`
   langBtn.textContent = d.langButton
   nextNameEl.textContent = planetName(lastNextTier)
   $('tutorial-text').innerHTML = d.tutorial
