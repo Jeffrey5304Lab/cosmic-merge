@@ -4,6 +4,7 @@ import { BOARD, TIERS } from './planets'
 import { drawPlanet } from './render'
 import { isMuted, setMuted } from './audio'
 import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
+import { shareCard } from './sharecard'
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id)
@@ -96,6 +97,16 @@ const game = new Game({
   },
 })
 
+const shareBtn = $<HTMLButtonElement>('share')
+shareBtn.addEventListener('click', async () => {
+  if (!lastResult) return
+  const outcome = await shareCard(lastResult.score, lastResult.maxTier)
+  if (outcome !== 'failed') {
+    shareBtn.textContent = t().shareDone
+    setTimeout(() => (shareBtn.textContent = t().share), 1800)
+  }
+})
+
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
   overlayEl.classList.add('hidden')
   lastResult = null
@@ -141,6 +152,8 @@ function applyI18n() {
   $('label-best').textContent = d.best
   $('label-next').textContent = d.next
   $('label-evolution').textContent = d.evolution
+  shareBtn.textContent = d.share
+  $<HTMLButtonElement>('restart').textContent = d.restart
   muteBtn.setAttribute('aria-label', d.mute)
   langBtn.textContent = d.langButton
   nextNameEl.textContent = planetName(lastNextTier)

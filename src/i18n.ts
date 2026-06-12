@@ -21,6 +21,8 @@ interface Dict {
   overNewRecord: (planet: string) => string
   overNormal: (planet: string, best: number) => string
   restart: string
+  share: string
+  shareDone: string
   /** 語言切換鈕顯示「切過去的語言」 */
   langButton: string
   tutorial: string
@@ -41,6 +43,8 @@ const dicts: Record<Lang, Dict> = {
     overNewRecord: p => `🏆 新紀錄！最高合成到「${p}」`,
     overNormal: (p, b) => `最高合成到「${p}」，最佳紀錄 ${b} 分`,
     restart: '再來一局',
+    share: '📸 分享成績',
+    shareDone: '✓ 已產生圖卡',
     langButton: 'EN',
     tutorial: '👆 拖曳瞄準・放開投放<br>相同星球會合體升級！',
   },
@@ -58,6 +62,8 @@ const dicts: Record<Lang, Dict> = {
     overNewRecord: p => `🏆 New record! Highest merge: ${p}`,
     overNormal: (p, b) => `Highest merge: ${p} · Best: ${b}`,
     restart: 'Play Again',
+    share: '📸 Share Score',
+    shareDone: '✓ Card saved',
     langButton: '中文',
     tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
   },

@@ -328,6 +328,18 @@ body {
   box-shadow: 0 1px 0 var(--ink);
 }
 
+.overlay-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  background: var(--card);
+  font-size: 16px;
+}
+
 .btn-ghost {
   background: var(--card);
   color: var(--ink);
