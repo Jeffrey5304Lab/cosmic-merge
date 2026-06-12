@@ -1,0 +1,46 @@
+import { DROPPABLE_TIERS, MAX_TIER } from './planets'
+
+/** 合成得分：與西瓜遊戲相同的三角數列（合出 tier n 得 (n+1)(n+2)/2 分） */
+export function mergeScore(resultTier: number): number {
+  return ((resultTier + 1) * (resultTier + 2)) / 2
+}
+
+/**
+ * 抽下一顆投放星球：小星球權重高，且不超過可投放上限。
+ * rng 可注入以便測試。
+ */
+export function pickDropTier(rng: () => number = Math.random): number {
+  // 權重：tier 0 最常見，遞減
+  const weights = [10, 8, 6, 4, 2]
+  const total = weights.reduce((a, b) => a + b, 0)
+  let roll = rng() * total
+  for (let t = 0; t < weights.length && t < DROPPABLE_TIERS; t++) {
+    roll -= weights[t]
+    if (roll < 0) return t
+  }
+  return 0
+}
+
+/** 兩顆同階星球合體後的階級；已達最高階回傳 null（太陽不再合成） */
+export function nextTier(tier: number): number | null {
+  return tier >= MAX_TIER ? null : tier + 1
+}
+
+/** 連鎖計分：時間窗內連續合成，倍率遞增（1x → 2x → 3x …，上限 8x） */
+export class ComboTracker {
+  private lastMergeAt = -Infinity
+  private chain = 0
+  constructor(private windowMs = 1500, private maxMultiplier = 8) {}
+
+  /** 回報一次合成，回傳本次倍率 */
+  hit(now: number): number {
+    this.chain = now - this.lastMergeAt <= this.windowMs ? this.chain + 1 : 1
+    this.lastMergeAt = now
+    return Math.min(this.chain, this.maxMultiplier)
+  }
+
+  /** 目前連鎖數（供 UI 顯示） */
+  current(now: number): number {
+    return now - this.lastMergeAt <= this.windowMs ? this.chain : 0
+  }
+}
