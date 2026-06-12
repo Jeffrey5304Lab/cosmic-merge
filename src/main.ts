@@ -6,6 +6,7 @@ import { isMuted, setMuted } from './audio'
 import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
 import { shareCard } from './sharecard'
 import { dailySeed, mulberry32 } from './logic'
+import { addScore, loadLeaderboard } from './leaderboard'
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id)
@@ -72,6 +73,33 @@ function popValue(el: HTMLElement, value: number) {
 
 /* ── 結算內容（語言切換時需要重畫） ── */
 let lastResult: { score: number; best: number; maxTier: number } | null = null
+let lastRank: number | null = null
+
+function renderLeaderboard() {
+  $('board-title').textContent = t().leaderboard
+  const list = $<HTMLOListElement>('board-list')
+  list.innerHTML = ''
+  const entries = loadLeaderboard().slice(0, 5)
+  if (entries.length === 0) {
+    const li = document.createElement('li')
+    li.className = 'b-empty'
+    li.textContent = t().noScores
+    list.appendChild(li)
+    return
+  }
+  entries.forEach((e, i) => {
+    const li = document.createElement('li')
+    if (lastRank !== null && i === lastRank - 1) li.className = 'me'
+    const left = document.createElement('span')
+    left.textContent = `${i + 1}. ${planetName(e.maxTier)}${e.mode === 'daily' ? ' 🗓️' : ''}`
+    const right = document.createElement('span')
+    right.className = 'b-score'
+    right.textContent = String(e.score)
+    li.append(left, right)
+    list.appendChild(li)
+  })
+}
+
 function renderGameOver() {
   if (!lastResult) return
   const { score, best, maxTier } = lastResult
@@ -82,6 +110,7 @@ function renderGameOver() {
   let sub = score >= best && score > 0 ? t().overNewRecord(name) : t().overNormal(name, best)
   if (mode === 'daily') sub += `・${t().dailyBest(Math.max(getDailyBest(), score))}`
   overSubEl.textContent = sub
+  renderLeaderboard()
 }
 
 /* ── 模式：經典 / 每日挑戰 ── */
@@ -121,6 +150,7 @@ const game = new Game({
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
     if (mode === 'daily') saveDailyBest(score)
+    lastRank = addScore({ score, maxTier, date: todayKey(), mode })
     lastResult = { score, best, maxTier }
     renderGameOver()
     overlayEl.classList.remove('hidden')

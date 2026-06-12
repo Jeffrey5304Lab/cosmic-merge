@@ -25,6 +25,8 @@ interface Dict {
   shareDone: string
   daily: string
   dailyBest: (score: number) => string
+  leaderboard: string
+  noScores: string
   /** 語言切換鈕顯示「切過去的語言」 */
   langButton: string
   tutorial: string
@@ -49,6 +51,8 @@ const dicts: Record<Lang, Dict> = {
     shareDone: '✓ 已產生圖卡',
     daily: '每日挑戰',
     dailyBest: s => `今日最佳 ${s} 分`,
+    leaderboard: '排行榜',
+    noScores: '還沒有紀錄，快來創造第一筆！',
     langButton: 'EN',
     tutorial: '👆 拖曳瞄準・放開投放<br>相同星球會合體升級！',
   },
@@ -70,6 +74,8 @@ const dicts: Record<Lang, Dict> = {
     shareDone: '✓ Card saved',
     daily: 'Daily Challenge',
     dailyBest: s => `Today's best: ${s}`,
+    leaderboard: 'TOP SCORES',
+    noScores: 'No scores yet — set the first record!',
     langButton: '中文',
     tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
   },

@@ -330,6 +330,56 @@ body {
   font-size: 14px;
 }
 
+/* ── 排行榜 ───────────────────────── */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 2px dashed var(--line);
+  padding-top: 10px;
+  min-width: 230px;
+}
+
+.board ol {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.board li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.board li.me {
+  background: var(--honey);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+.board li .b-score {
+  font-family: var(--font-display);
+  color: var(--accent);
+}
+
+.board li.me .b-score {
+  color: var(--ink);
+}
+
+.board .b-empty {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
 /* ── 按鈕：紙貼紙風 ────────────────── */
 .btn {
   font-family: var(--font-display);
