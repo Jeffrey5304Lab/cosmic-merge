@@ -24,6 +24,12 @@ await page.goto(URL, { waitUntil: 'networkidle' })
 await page.waitForTimeout(800)
 await page.screenshot({ path: 'screenshots/desktop-initial.png' })
 
+// 鍵盤操作也要能玩：← → 瞄準 + 空白鍵投放
+await page.keyboard.press('ArrowLeft')
+await page.keyboard.press('ArrowLeft')
+await page.keyboard.press('Space')
+await page.waitForTimeout(600)
+
 // 模擬投放：固定幾個 x 位置連丟 10 顆，盡量觸發合成
 const canvas = page.locator('#game')
 const box = await canvas.boundingBox()
@@ -38,12 +44,19 @@ await page.screenshot({ path: 'screenshots/desktop-playing.png' })
 const score = await page.locator('#score').textContent()
 console.log(`desktop score after 10 drops: ${score}`)
 
-// 手機直向
-const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } })
+// 手機直向（中文 locale，驗證 i18n 偵測）
+const zhContext = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  locale: 'zh-TW',
+})
+const mobile = await zhContext.newPage()
 mobile.on('pageerror', e => errors.push(`mobile pageerror: ${e.message}`))
 await mobile.goto(URL, { waitUntil: 'networkidle' })
 await mobile.waitForTimeout(800)
 await mobile.screenshot({ path: 'screenshots/mobile-initial.png' })
+
+const zhLabel = await mobile.locator('#label-score').textContent()
+if (zhLabel !== '分數') errors.push(`zh-TW locale should show 分數, got: ${zhLabel}`)
 
 await browser.close()
 

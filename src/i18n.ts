@@ -23,6 +23,7 @@ interface Dict {
   restart: string
   /** 語言切換鈕顯示「切過去的語言」 */
   langButton: string
+  tutorial: string
 }
 
 const dicts: Record<Lang, Dict> = {
@@ -41,6 +42,7 @@ const dicts: Record<Lang, Dict> = {
     overNormal: (p, b) => `最高合成到「${p}」，最佳紀錄 ${b} 分`,
     restart: '再來一局',
     langButton: 'EN',
+    tutorial: '👆 拖曳瞄準・放開投放<br>相同星球會合體升級！',
   },
   en: {
     docTitle: 'Cosmic Merge',
@@ -57,6 +59,7 @@ const dicts: Record<Lang, Dict> = {
     overNormal: (p, b) => `Highest merge: ${p} · Best: ${b}`,
     restart: 'Play Again',
     langButton: '中文',
+    tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
   },
 }
 

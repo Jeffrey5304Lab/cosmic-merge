@@ -111,6 +111,10 @@ export class Game {
     return body
   }
 
+  get aimPosition(): number {
+    return this.aimX
+  }
+
   /** 玩家瞄準（邏輯座標 x） */
   aim(x: number) {
     const r = TIERS[this.currentTier].radius
@@ -194,6 +198,10 @@ export class Game {
       this.shake = Math.min(6, 1 + result * 0.5)
       if (result === MAX_TIER) playFanfare()
       else playMerge(result)
+      // 手機觸覺回饋：大星球震久一點（Node 測試環境沒有 navigator）
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(8 + result * 3)
+      }
 
       this.cb.onScore(this.score, this.best)
       this.cb.onCombo(multiplier)

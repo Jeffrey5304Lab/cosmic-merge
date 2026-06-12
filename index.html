@@ -10,6 +10,10 @@
     <meta property="og:title" content="Cosmic Merge 宇宙合併" />
     <meta property="og:description" content="Suika-style physics merge game with cute chibi planets. Merge from Meteor to the Sun!" />
     <meta property="og:type" content="website" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-512.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -35,6 +39,7 @@
         <div id="stage" class="stage">
           <canvas id="game"></canvas>
           <div id="combo" class="combo" aria-live="polite"></div>
+          <div id="tutorial" class="tutorial hidden"><p id="tutorial-text"></p></div>
           <div id="gameover" class="overlay hidden">
             <div class="overlay-card">
               <p class="overlay-emoji" id="over-emoji">💫</p>

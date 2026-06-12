@@ -200,6 +200,40 @@ body {
   }
 }
 
+/* ── 新手教學提示 ─────────────────── */
+.tutorial {
+  position: absolute;
+  bottom: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #15152eee;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.7;
+  pointer-events: none;
+  animation: tutorial-bob 2s ease-in-out infinite;
+  transition: opacity 0.4s;
+  box-shadow: 0 8px 30px #000a;
+}
+
+.tutorial.hidden {
+  opacity: 0;
+}
+
+@keyframes tutorial-bob {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-8px);
+  }
+}
+
 /* ── 結算 Overlay ─────────────────── */
 .overlay {
   position: absolute;

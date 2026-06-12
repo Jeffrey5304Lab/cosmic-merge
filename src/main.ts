@@ -102,10 +102,33 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   game.restart()
 })
 
+muteBtn.textContent = isMuted() ? '🔇' : '🔊'
 muteBtn.addEventListener('click', () => {
   setMuted(!isMuted())
   muteBtn.textContent = isMuted() ? '🔇' : '🔊'
 })
+
+/* ── 新手教學：第一次玩才顯示，投放後收起 ── */
+const TUTORIAL_KEY = 'cosmic-merge:tutorial-seen'
+const tutorialEl = $<HTMLDivElement>('tutorial')
+let tutorialVisible = false
+try {
+  tutorialVisible = !localStorage.getItem(TUTORIAL_KEY)
+} catch {
+  tutorialVisible = true
+}
+if (tutorialVisible) tutorialEl.classList.remove('hidden')
+
+function dismissTutorial() {
+  if (!tutorialVisible) return
+  tutorialVisible = false
+  tutorialEl.classList.add('hidden')
+  try {
+    localStorage.setItem(TUTORIAL_KEY, '1')
+  } catch {
+    /* 私密模式忽略 */
+  }
+}
 
 /* ── 多語系 ── */
 function applyI18n() {
@@ -121,6 +144,7 @@ function applyI18n() {
   muteBtn.setAttribute('aria-label', d.mute)
   langBtn.textContent = d.langButton
   nextNameEl.textContent = planetName(lastNextTier)
+  $('tutorial-text').innerHTML = d.tutorial
   renderChart()
   renderGameOver()
 }
@@ -139,6 +163,22 @@ canvas.addEventListener('pointermove', e => game.aim(toBoardX(e.clientX)))
 canvas.addEventListener('pointerup', e => {
   game.aim(toBoardX(e.clientX))
   game.drop()
+  dismissTutorial()
+})
+
+/* ── 鍵盤操作：← → 瞄準、空白鍵投放 ── */
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') {
+    game.aim(game.aimPosition - 14)
+    e.preventDefault()
+  } else if (e.key === 'ArrowRight') {
+    game.aim(game.aimPosition + 14)
+    e.preventDefault()
+  } else if (e.key === ' ' || e.key === 'ArrowDown') {
+    game.drop()
+    dismissTutorial()
+    e.preventDefault()
+  }
 })
 
 /* ── 進化圖鑑 ── */

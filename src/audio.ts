@@ -11,9 +11,24 @@ function ensureCtx(): AudioContext | null {
   }
 }
 
-let muted = false
+const MUTE_KEY = 'cosmic-merge:muted'
+
+function loadMuted(): boolean {
+  try {
+    return localStorage.getItem(MUTE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+let muted = loadMuted()
 export function setMuted(m: boolean) {
   muted = m
+  try {
+    localStorage.setItem(MUTE_KEY, m ? '1' : '0')
+  } catch {
+    /* 私密模式忽略 */
+  }
 }
 export function isMuted() {
   return muted
