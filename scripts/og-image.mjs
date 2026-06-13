@@ -71,7 +71,7 @@ await page.evaluate(async () => {
   g.fillStyle = '#3B3024'
   g.font = "110px 'Gochi Hand', cursive"
   g.fillText('Cosmic Merge', W / 2, 145)
-  g.font = "bold 38px 'Noto Sans TC', sans-serif"
+  g.font = "bold 38px system-ui, sans-serif"
   g.fillStyle = '#E07A5F'
   g.fillText('Merge planets all the way to the Sun!', W / 2, 215)
 

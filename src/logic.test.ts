@@ -13,10 +13,9 @@ describe('TIERS 設定', () => {
     TIERS.forEach((t, i) => expect(t.tier).toBe(i))
   })
 
-  it('每一階都有中英文名稱（i18n 完整性）', () => {
+  it('每一階都有名稱', () => {
     for (const t of TIERS) {
       expect(t.name.length).toBeGreaterThan(0)
-      expect(t.nameEn.length).toBeGreaterThan(0)
     }
   })
 

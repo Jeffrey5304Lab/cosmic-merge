@@ -396,7 +396,7 @@ function renderChart() {
     const scale = Math.min(1, (10 + i * 1.6) / def.radius)
     drawPlanet(g, def, w * i + w / 2, 30, 0, scale)
     g.fillStyle = '#6B5844'
-    g.font = "bold 10px 'Noto Sans TC', sans-serif"
+    g.font = "bold 10px system-ui, sans-serif"
     g.textAlign = 'center'
     g.fillText(planetName(i), w * i + w / 2, 64)
   })

@@ -100,7 +100,7 @@ export class ParticleSystem {
       const progress = t.life / t.maxLife
       g.globalAlpha = 1 - progress
       g.fillStyle = t.color
-      g.font = "bold 24px 'Gochi Hand', 'Noto Sans TC', cursive"
+      g.font = "bold 24px 'Gochi Hand', cursive"
       g.textAlign = 'center'
       g.strokeStyle = 'rgba(59, 48, 36, 0.75)'
       g.lineWidth = 4

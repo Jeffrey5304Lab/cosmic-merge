@@ -47,7 +47,7 @@ export function renderShareCard(score: number, maxTier: number): HTMLCanvasEleme
   const scale = Math.min(1.5, 170 / tier.radius)
   drawPlanet(g, tier, W / 2, py + ph / 2 - 20, 0, scale, 2)
   // 星球名
-  g.font = "bold 38px 'Noto Sans TC', sans-serif"
+  g.font = "bold 38px system-ui, sans-serif"
   g.textAlign = 'center'
   g.fillStyle = '#F6EAC9'
   g.fillText(planetName(maxTier), W / 2, py + ph - 46)
@@ -61,21 +61,21 @@ export function renderShareCard(score: number, maxTier: number): HTMLCanvasEleme
   g.stroke()
 
   // 標題
-  g.font = "64px 'Gochi Hand', 'Noto Sans TC', cursive"
+  g.font = "64px 'Gochi Hand', cursive"
   g.textAlign = 'center'
   g.fillStyle = '#3B3024'
   g.fillText('Cosmic Merge', W / 2, 100)
 
   // 分數
-  g.font = "bold 26px 'Noto Sans TC', sans-serif"
+  g.font = "bold 26px system-ui, sans-serif"
   g.fillStyle = '#9C8B76'
   g.fillText(STR.score, W / 2, py + ph + 78)
-  g.font = "92px 'Gochi Hand', 'Noto Sans TC', cursive"
+  g.font = "92px 'Gochi Hand', cursive"
   g.fillStyle = '#E07A5F'
   g.fillText(String(score), W / 2, py + ph + 162)
 
   // 日期
-  g.font = "22px 'Noto Sans TC', sans-serif"
+  g.font = "22px system-ui, sans-serif"
   g.fillStyle = '#9C8B76'
   g.fillText(new Date().toLocaleDateString(), W / 2, H - 26)
 

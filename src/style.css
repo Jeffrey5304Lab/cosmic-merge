@@ -9,8 +9,8 @@
   --accent: #e07a5f; /* 陶土橘 */
   --honey: #e8a33d;
   --night: #414968; /* 畫板夜空 */
-  --font-ui: 'Noto Sans TC', system-ui, sans-serif;
-  --font-display: 'Gochi Hand', 'Noto Sans TC', cursive;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Gochi Hand', cursive;
 }
 
 * {

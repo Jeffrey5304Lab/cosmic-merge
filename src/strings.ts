@@ -30,5 +30,5 @@ export const STR = {
 }
 
 export function planetName(tier: number): string {
-  return TIERS[tier].nameEn
+  return TIERS[tier].name
 }
