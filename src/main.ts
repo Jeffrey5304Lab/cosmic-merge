@@ -411,7 +411,7 @@ window.addEventListener('keydown', () => startMusic(), { once: true })
 /* ── PWA 離線（只在正式版註冊，避免 dev 快取干擾） ── */
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
       /* SW 註冊失敗不影響遊戲 */
     })
   })
