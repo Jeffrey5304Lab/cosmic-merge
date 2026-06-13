@@ -13,6 +13,7 @@ interface Dict {
   score: string
   best: string
   next: string
+  bestMerge: string
   evolution: string
   mute: string
   overTitle: string
@@ -45,6 +46,7 @@ const dicts: Record<Lang, Dict> = {
     score: '分數',
     best: '最佳',
     next: '下一顆',
+    bestMerge: '最高合成',
     evolution: '進化圖鑑',
     mute: '切換音效',
     overTitle: '宇宙打烊了！',
@@ -73,6 +75,7 @@ const dicts: Record<Lang, Dict> = {
     score: 'SCORE',
     best: 'BEST',
     next: 'NEXT',
+    bestMerge: 'TOP MERGE',
     evolution: 'EVOLUTION',
     mute: 'Toggle sound',
     overTitle: 'The cosmos is full!',

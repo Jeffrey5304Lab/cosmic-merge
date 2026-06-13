@@ -45,7 +45,7 @@ body {
   gap: 10px;
   padding: 12px;
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
   height: 100dvh;
 }
 
@@ -53,9 +53,8 @@ body {
 .hud {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   width: 100%;
-  max-width: 620px;
 }
 
 .title {
@@ -150,6 +149,45 @@ body {
   flex-direction: column;
   gap: 10px;
   align-items: center;
+  /* 左右側欄等寬，對稱框住中央 board */
+  width: 132px;
+  flex: 0 0 132px;
+}
+
+.side-left {
+  align-items: stretch;
+}
+
+/* ── 計分卡（桌面左欄） ─────────────── */
+.stat-card {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 3px 0 rgba(59, 48, 36, 0.3);
+}
+
+.stat-card .hud-value {
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.05;
+}
+
+/* 最高合成卡：星球縮圖 + 名稱 */
+.best-merge-card {
+  align-items: center;
+  gap: 4px;
+}
+
+#bestmerge {
+  width: 64px;
+  height: 64px;
+}
+
+.best-merge-card .next-name {
+  text-align: center;
 }
 
 .next-card {
@@ -578,15 +616,45 @@ body {
 /* ── 手機直向：側欄收進舞台上方 ───── */
 @media (max-width: 560px) {
   .stage-row {
-    flex-direction: column-reverse;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
   }
 
   .side {
     flex-direction: row;
     width: 100%;
+    flex: 0 0 auto;
     justify-content: center;
+    gap: 8px;
+  }
+
+  /* 分數列在上、道具列其次、board 最後 */
+  .side-left {
+    order: 0;
+  }
+  .side-right {
+    order: 1;
+  }
+  .stage {
+    order: 2;
+  }
+
+  .side-left .stat-card {
+    flex: 1;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 7px 16px;
+  }
+
+  /* 手機空間有限：最高合成只在結算畫面呈現 */
+  .best-merge-card {
+    display: none;
+  }
+
+  .stat-card .hud-value {
+    font-size: 24px;
   }
 
   .next-card {

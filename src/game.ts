@@ -24,7 +24,7 @@ interface PlanetMeta {
 export type GameState = 'ready' | 'playing' | 'over'
 
 export interface GameCallbacks {
-  onScore(score: number, best: number): void
+  onScore(score: number, best: number, maxTier: number): void
   onNext(tier: number): void
   onCombo(multiplier: number): void
   onGameOver(score: number, best: number, maxTierReached: number): void
@@ -91,7 +91,7 @@ export class Game {
       }
     })
     this.cb.onNext(this.nextDropTier)
-    this.cb.onScore(this.score, this.best)
+    this.cb.onScore(this.score, this.best, this.maxTierReached)
   }
 
   private buildWalls() {
@@ -204,7 +204,7 @@ export class Game {
     this.nextDropTier = pickDropTier(this.rng)
     this.combo = new ComboTracker()
     this.cb.onNext(this.nextDropTier)
-    this.cb.onScore(this.score, this.best)
+    this.cb.onScore(this.score, this.best, this.maxTierReached)
   }
 
   update(dt: number) {
@@ -260,7 +260,7 @@ export class Game {
         navigator.vibrate(8 + result * 3)
       }
 
-      this.cb.onScore(this.score, this.best)
+      this.cb.onScore(this.score, this.best, this.maxTierReached)
       this.cb.onCombo(multiplier)
     }
     this.mergeQueue = []
@@ -312,7 +312,7 @@ export class Game {
     }
 
     if (this.state !== 'over') {
-      drawAimLine(g, this.aimX)
+      drawAimLine(g, this.aimX, TIERS[this.currentTier].radius, this.time)
       // 預備投放的星球（懸浮在頂端）
       const hover = Math.sin(this.time * 3) * 3
       drawPlanet(g, TIERS[this.currentTier], this.aimX, BOARD.dropY + hover, 0, 1, this.time)

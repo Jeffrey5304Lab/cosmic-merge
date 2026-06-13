@@ -26,18 +26,25 @@
   <body>
     <div id="app">
       <header class="hud">
-        <div class="hud-block">
-          <span id="label-score" class="hud-label">分數</span>
-          <span id="score" class="hud-value">0</span>
-        </div>
         <h1 class="title"><span id="title-1">宇宙</span><span id="title-2" class="title-accent">合併</span></h1>
-        <div class="hud-block hud-right">
-          <span id="label-best" class="hud-label">最佳</span>
-          <span id="best" class="hud-value">0</span>
-        </div>
       </header>
 
       <div class="stage-row">
+        <aside class="side side-left">
+          <div class="stat-card">
+            <span id="label-score" class="hud-label">分數</span>
+            <span id="score" class="hud-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span id="label-best" class="hud-label">最佳</span>
+            <span id="best" class="hud-value">0</span>
+          </div>
+          <div class="stat-card best-merge-card">
+            <span id="label-bestmerge" class="hud-label">最高合成</span>
+            <canvas id="bestmerge" width="120" height="120"></canvas>
+            <span id="bestmerge-name" class="next-name">—</span>
+          </div>
+        </aside>
         <div id="stage" class="stage">
           <canvas id="game"></canvas>
           <div id="mode-badge" class="mode-badge hidden">🗓️</div>
@@ -62,7 +69,7 @@
             </div>
           </div>
         </div>
-        <aside class="side">
+        <aside class="side side-right">
           <div class="next-card">
             <span id="label-next" class="hud-label">下一顆</span>
             <canvas id="next" width="120" height="120"></canvas>

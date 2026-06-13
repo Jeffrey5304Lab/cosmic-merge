@@ -25,6 +25,8 @@ const bestEl = $<HTMLSpanElement>('best')
 const comboEl = $<HTMLDivElement>('combo')
 const nextCanvas = $<HTMLCanvasElement>('next')
 const nextNameEl = $<HTMLSpanElement>('next-name')
+const bestMergeCanvas = $<HTMLCanvasElement>('bestmerge')
+const bestMergeNameEl = $<HTMLSpanElement>('bestmerge-name')
 const overlayEl = $<HTMLDivElement>('gameover')
 const overTitleEl = $<HTMLHeadingElement>('over-title')
 const overScoreEl = $<HTMLParagraphElement>('over-score')
@@ -49,6 +51,23 @@ function renderNext(tier: number) {
   const scale = Math.min(1, 44 / def.radius)
   drawPlanet(g, def, 60, 60, 0, scale)
   nextNameEl.textContent = planetName(tier)
+}
+
+/* ── 最高合成（左欄）：本局合成過的最大星球 ── */
+let bestMergeTier = 0
+function renderBestMerge(tier: number) {
+  bestMergeTier = tier
+  const g = bestMergeCanvas.getContext('2d')
+  if (!g) return
+  g.clearRect(0, 0, 120, 120)
+  if (tier <= 0) {
+    bestMergeNameEl.textContent = '—'
+    return
+  }
+  const def = TIERS[tier]
+  const scale = Math.min(1, 44 / def.radius)
+  drawPlanet(g, def, 60, 60, 0, scale)
+  bestMergeNameEl.textContent = planetName(tier)
 }
 
 /* ── Combo 提示 ── */
@@ -143,10 +162,11 @@ function saveDailyBest(score: number) {
 
 /* ── 遊戲實例 ── */
 const game = new Game({
-  onScore(score, best) {
+  onScore(score, best, maxTier) {
     popValue(scoreEl, score)
     // 每日挑戰模式：最佳欄顯示今日最佳
     bestEl.textContent = String(mode === 'daily' ? Math.max(getDailyBest(), score) : best)
+    if (maxTier !== bestMergeTier) renderBestMerge(maxTier)
   },
   onNext: renderNext,
   onCombo: showCombo,
@@ -189,6 +209,7 @@ function applyMode() {
   modeBadge.textContent = `🗓️ ${t().daily}`
   overlayEl.classList.add('hidden')
   lastResult = null
+  renderBestMerge(0)
   // 每日挑戰：日期種子 → 全世界今天同一套星球序列
   game.restart(mode === 'daily' ? mulberry32(dailySeed()) : Math.random)
 }
@@ -304,6 +325,7 @@ function applyI18n() {
   $('label-score').textContent = d.score
   $('label-best').textContent = d.best
   $('label-next').textContent = d.next
+  $('label-bestmerge').textContent = d.bestMerge
   $('label-evolution').textContent = d.evolution
   shareBtn.textContent = d.share
   $<HTMLButtonElement>('restart').textContent = d.restart
@@ -316,6 +338,7 @@ function applyI18n() {
   if (smashMode) hintTextEl.textContent = d.hammerHint
   langBtn.textContent = d.langButton
   nextNameEl.textContent = planetName(lastNextTier)
+  renderBestMerge(bestMergeTier)
   $('tutorial-text').innerHTML = d.tutorial
   renderChart()
   renderGameOver()

@@ -532,15 +532,42 @@ export function drawPlanet(
   g.restore()
 }
 
-/** 投放瞄準虛線 */
-export function drawAimLine(g: CanvasRenderingContext2D, x: number) {
+/** 投放瞄準虛線 + 落點殘影圓環 */
+export function drawAimLine(g: CanvasRenderingContext2D, x: number, r = 0, time = 0) {
+  // 落地中心：自由落體到地板（無遮擋時）
+  const landY = BOARD.height - r - 2
+  const pulse = 0.5 + 0.5 * Math.sin(time * 4)
   g.save()
-  g.strokeStyle = 'rgba(246, 234, 201, 0.35)'
-  g.setLineDash([5, 11])
-  g.lineWidth = 2
+  // 較亮的手繪虛線
+  g.strokeStyle = `rgba(246, 234, 201, ${0.5 + 0.18 * pulse})`
+  g.setLineDash([6, 9])
+  g.lineWidth = 2.5
+  g.lineCap = 'round'
   g.beginPath()
   g.moveTo(x, BOARD.dropY)
-  g.lineTo(x, BOARD.height)
+  g.lineTo(x, landY)
   g.stroke()
+  g.setLineDash([])
+
+  // 落點殘影：當前星球大小的虛線圓環（脈動）
+  if (r > 0) {
+    g.strokeStyle = `rgba(232, 163, 61, ${0.45 + 0.3 * pulse})`
+    g.setLineDash([4, 6])
+    g.lineWidth = 2
+    g.beginPath()
+    g.arc(x, landY, r, 0, Math.PI * 2)
+    g.stroke()
+    // 中心小十字標記
+    g.setLineDash([])
+    g.strokeStyle = `rgba(246, 234, 201, ${0.4 + 0.25 * pulse})`
+    g.lineWidth = 2
+    const t = Math.min(r * 0.4, 7)
+    g.beginPath()
+    g.moveTo(x - t, landY)
+    g.lineTo(x + t, landY)
+    g.moveTo(x, landY - t)
+    g.lineTo(x, landY + t)
+    g.stroke()
+  }
   g.restore()
 }
