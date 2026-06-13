@@ -19,7 +19,6 @@ Drop cute planets into a storybook night sky and merge your way from Meteor to t
 - 💫 **復活機制**：每局一次，看（模擬）廣告清掉上方星球續玩——獎勵式廣告位已就緒
 - 🔨 **道具**：小錘子敲掉任一顆（看廣告獲得）、換球（current↔next 免費互換）
 - 🎵 **生成式 lo-fi BGM**：WebAudio 和弦墊 + 五聲音階撥弦，零音檔
-- 🌐 **雙語**：zh-TW / English，自動偵測 + 即時切換
 - 📱 **觸控 / 滑鼠 / 鍵盤**全支援、合成觸覺震動、PWA 離線可玩（Service Worker）
 
 > 廣告皆走 `src/ads.ts` 抽象層，目前是 Mock 實作；上線接 AdMob / H5 Games Ads 只需替換一個 Provider。

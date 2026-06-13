@@ -1,7 +1,7 @@
 /** 成績分享卡：用 Canvas 畫一張 cozy 風格的成績圖，走原生分享或下載 */
 import { TIERS } from './planets'
 import { drawPlanet } from './render'
-import { planetName, t } from './i18n'
+import { planetName, STR } from './strings'
 
 const W = 720
 const H = 900
@@ -67,10 +67,9 @@ export function renderShareCard(score: number, maxTier: number): HTMLCanvasEleme
   g.fillText('Cosmic Merge', W / 2, 100)
 
   // 分數
-  const d = t()
   g.font = "bold 26px 'Noto Sans TC', sans-serif"
   g.fillStyle = '#9C8B76'
-  g.fillText(d.score, W / 2, py + ph + 78)
+  g.fillText(STR.score, W / 2, py + ph + 78)
   g.font = "92px 'Gochi Hand', 'Noto Sans TC', cursive"
   g.fillStyle = '#E07A5F'
   g.fillText(String(score), W / 2, py + ph + 162)

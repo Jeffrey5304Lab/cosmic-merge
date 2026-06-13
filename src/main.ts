@@ -3,7 +3,7 @@ import { Game } from './game'
 import { BOARD, TIERS } from './planets'
 import { drawPlanet } from './render'
 import { isMuted, setMuted, startMusic } from './audio'
-import { getLang, onLangChange, planetName, t, toggleLang } from './i18n'
+import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { dailySeed, mulberry32 } from './logic'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
@@ -32,7 +32,6 @@ const overTitleEl = $<HTMLHeadingElement>('over-title')
 const overScoreEl = $<HTMLParagraphElement>('over-score')
 const overSubEl = $<HTMLParagraphElement>('over-sub')
 const overEmojiEl = $<HTMLParagraphElement>('over-emoji')
-const langBtn = $<HTMLButtonElement>('lang')
 const muteBtn = $<HTMLButtonElement>('mute')
 
 const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -97,14 +96,14 @@ let lastResult: { score: number; best: number; maxTier: number } | null = null
 let lastRank: number | null = null
 
 function renderLeaderboard() {
-  $('board-title').textContent = t().leaderboard
+  $('board-title').textContent = STR.leaderboard
   const list = $<HTMLOListElement>('board-list')
   list.innerHTML = ''
   const entries = loadLeaderboard().slice(0, 5)
   if (entries.length === 0) {
     const li = document.createElement('li')
     li.className = 'b-empty'
-    li.textContent = t().noScores
+    li.textContent = STR.noScores
     list.appendChild(li)
     return
   }
@@ -125,11 +124,11 @@ function renderGameOver() {
   if (!lastResult) return
   const { score, best, maxTier } = lastResult
   const name = planetName(maxTier)
-  overTitleEl.textContent = t().overTitle
-  overScoreEl.innerHTML = t().overScore(score)
+  overTitleEl.textContent = STR.overTitle
+  overScoreEl.innerHTML = STR.overScore(score)
   overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
-  let sub = score >= best && score > 0 ? t().overNewRecord(name) : t().overNormal(name, best)
-  if (mode === 'daily') sub += `・${t().dailyBest(Math.max(getDailyBest(), score))}`
+  let sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
+  if (mode === 'daily') sub += ` · ${STR.dailyBest(Math.max(getDailyBest(), score))}`
   overSubEl.textContent = sub
   renderLeaderboard()
 }
@@ -206,7 +205,7 @@ const modeBadge = $<HTMLDivElement>('mode-badge')
 function applyMode() {
   modeBtn.classList.toggle('active', mode === 'daily')
   modeBadge.classList.toggle('hidden', mode !== 'daily')
-  modeBadge.textContent = `🗓️ ${t().daily}`
+  modeBadge.textContent = `🗓️ ${STR.daily}`
   overlayEl.classList.add('hidden')
   lastResult = null
   renderBestMerge(0)
@@ -253,7 +252,7 @@ hammerBtn.addEventListener('click', async () => {
   if (getHammers() > 0) {
     smashMode = true
     hammerBtn.classList.add('armed')
-    hintTextEl.textContent = t().hammerHint
+    hintTextEl.textContent = STR.hammerHint
     hintEl.classList.remove('hidden')
     return
   }
@@ -272,8 +271,8 @@ shareBtn.addEventListener('click', async () => {
   if (!lastResult) return
   const outcome = await shareCard(lastResult.score, lastResult.maxTier)
   if (outcome !== 'failed') {
-    shareBtn.textContent = t().shareDone
-    setTimeout(() => (shareBtn.textContent = t().share), 1800)
+    shareBtn.textContent = STR.shareDone
+    setTimeout(() => (shareBtn.textContent = STR.share), 1800)
   }
 })
 
@@ -315,40 +314,30 @@ function dismissTutorial() {
   }
 }
 
-/* ── 多語系 ── */
-function applyI18n() {
-  const d = t()
-  document.documentElement.lang = getLang()
-  document.title = d.docTitle
-  $('title-1').textContent = d.title1
-  $('title-2').textContent = d.title2
-  $('label-score').textContent = d.score
-  $('label-best').textContent = d.best
-  $('label-next').textContent = d.next
-  $('label-bestmerge').textContent = d.bestMerge
-  $('label-evolution').textContent = d.evolution
-  shareBtn.textContent = d.share
-  $<HTMLButtonElement>('restart').textContent = d.restart
-  muteBtn.setAttribute('aria-label', d.mute)
-  modeBtn.setAttribute('aria-label', d.daily)
-  modeBadge.textContent = `🗓️ ${d.daily}`
-  reviveBtn.textContent = d.revive
-  swapBtn.setAttribute('aria-label', d.swap)
-  hammerBtn.setAttribute('aria-label', d.hammer)
-  if (smashMode) hintTextEl.textContent = d.hammerHint
-  langBtn.textContent = d.langButton
+/* ── UI 文字（英文單語系，啟動時套用一次） ── */
+function applyStrings() {
+  document.title = STR.docTitle
+  $('title-1').textContent = STR.title1
+  $('title-2').textContent = STR.title2
+  $('label-score').textContent = STR.score
+  $('label-best').textContent = STR.best
+  $('label-next').textContent = STR.next
+  $('label-bestmerge').textContent = STR.bestMerge
+  $('label-evolution').textContent = STR.evolution
+  shareBtn.textContent = STR.share
+  $<HTMLButtonElement>('restart').textContent = STR.restart
+  muteBtn.setAttribute('aria-label', STR.mute)
+  modeBtn.setAttribute('aria-label', STR.daily)
+  modeBadge.textContent = `🗓️ ${STR.daily}`
+  reviveBtn.textContent = STR.revive
+  swapBtn.setAttribute('aria-label', STR.swap)
+  hammerBtn.setAttribute('aria-label', STR.hammer)
   nextNameEl.textContent = planetName(lastNextTier)
   renderBestMerge(bestMergeTier)
-  $('tutorial-text').innerHTML = d.tutorial
+  $('tutorial-text').innerHTML = STR.tutorial
   renderChart()
   renderGameOver()
 }
-
-langBtn.addEventListener('click', () => {
-  toggleLang()
-  langBtn.blur()
-})
-onLangChange(applyI18n)
 
 /* ── 指標操作：移動瞄準、放開投放（小錘子模式則是敲擊） ── */
 function toBoardX(clientX: number): number {
@@ -413,7 +402,7 @@ function renderChart() {
   })
 }
 
-applyI18n()
+applyStrings()
 
 /* ── BGM：第一次互動後啟動（autoplay 政策） ── */
 window.addEventListener('pointerdown', () => startMusic(), { once: true })

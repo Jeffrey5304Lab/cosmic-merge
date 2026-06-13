@@ -73,7 +73,7 @@ await page.evaluate(async () => {
   g.fillText('Cosmic Merge', W / 2, 145)
   g.font = "bold 38px 'Noto Sans TC', sans-serif"
   g.fillStyle = '#E07A5F'
-  g.fillText('宇宙合併 — 把星球合到太陽！', W / 2, 215)
+  g.fillText('Merge planets all the way to the Sun!', W / 2, 215)
 
   document.body.appendChild(c)
 })

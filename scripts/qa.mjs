@@ -99,12 +99,9 @@ const errors = []
   const stillHidden = await page.locator('#tutorial').evaluate(el => el.classList.contains('hidden'))
   check('重載後教學不再出現', stillHidden)
 
-  /* ═══ 3. 偏好持久化：靜音 / 語言 / 最佳分數 ═══ */
+  /* ═══ 3. 偏好持久化：靜音 / 最佳分數 ═══ */
   await page.locator('#mute').click()
   const mutedState = await page.locator('#mute').evaluate(el => el.classList.contains('muted'))
-  await page.locator('#lang').click()
-  await page.waitForTimeout(200)
-  const langAfterToggle = await page.evaluate(() => document.documentElement.lang)
   await page.reload({ waitUntil: 'networkidle' })
   await page.waitForTimeout(400)
   check(
@@ -112,7 +109,6 @@ const errors = []
     (await page.locator('#mute').evaluate(el => el.classList.contains('muted'))) === mutedState,
     `muted=${mutedState}`,
   )
-  check('語言設定重載後保留', (await page.evaluate(() => document.documentElement.lang)) === langAfterToggle, langAfterToggle)
 
   // 玩出分數 → 重載 → 最佳分數保留
   const box2 = await page.locator('#game').boundingBox()
@@ -162,7 +158,6 @@ const errors = []
 {
   const ctx = await browser.newContext({
     viewport: { width: 390, height: 844 },
-    locale: 'zh-TW',
     hasTouch: true,
   })
   const page = await ctx.newPage()

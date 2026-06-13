@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="zh-TW">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#F4E9D7" />
-    <title>宇宙合併 Cosmic Merge</title>
-    <meta name="description" content="把可愛星球丟進太空艙，同星球合體升級，從隕石合到太陽！Drop cute chibi planets and merge your way from Meteor to the Sun!" />
-    <meta property="og:title" content="Cosmic Merge 宇宙合併" />
+    <title>Cosmic Merge</title>
+    <meta name="description" content="Drop cute chibi planets and merge your way from Meteor to the Sun! A Suika-style physics merge game." />
+    <meta property="og:title" content="Cosmic Merge" />
     <meta property="og:description" content="Suika-style physics merge game with cute chibi planets. Merge from Meteor to the Sun!" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/og-image.png" />
@@ -26,21 +26,21 @@
   <body>
     <div id="app">
       <header class="hud">
-        <h1 class="title"><span id="title-1">宇宙</span><span id="title-2" class="title-accent">合併</span></h1>
+        <h1 class="title"><span id="title-1">Cosmic </span><span id="title-2" class="title-accent">Merge</span></h1>
       </header>
 
       <div class="stage-row">
         <aside class="side side-left">
           <div class="stat-card">
-            <span id="label-score" class="hud-label">分數</span>
+            <span id="label-score" class="hud-label">SCORE</span>
             <span id="score" class="hud-value">0</span>
           </div>
           <div class="stat-card">
-            <span id="label-best" class="hud-label">最佳</span>
+            <span id="label-best" class="hud-label">BEST</span>
             <span id="best" class="hud-value">0</span>
           </div>
           <div class="stat-card best-merge-card">
-            <span id="label-bestmerge" class="hud-label">最高合成</span>
+            <span id="label-bestmerge" class="hud-label">TOP MERGE</span>
             <canvas id="bestmerge" width="120" height="120"></canvas>
             <span id="bestmerge-name" class="next-name">—</span>
           </div>
@@ -54,28 +54,28 @@
           <div id="gameover" class="overlay hidden">
             <div class="overlay-card">
               <p class="overlay-emoji" id="over-emoji">💫</p>
-              <h2 id="over-title">宇宙打烊了！</h2>
+              <h2 id="over-title">The cosmos is full!</h2>
               <p class="overlay-score" id="over-score"></p>
               <p class="overlay-sub" id="over-sub"></p>
               <div class="board">
-                <span id="board-title" class="hud-label">排行榜</span>
+                <span id="board-title" class="hud-label">TOP SCORES</span>
                 <ol id="board-list"></ol>
               </div>
               <div class="overlay-actions">
-                <button id="revive" class="btn btn-revive">💫 看廣告復活</button>
-                <button id="share" class="btn btn-secondary">📸 分享成績</button>
-                <button id="restart" class="btn">再來一局</button>
+                <button id="revive" class="btn btn-revive">💫 Revive (Ad)</button>
+                <button id="share" class="btn btn-secondary">📸 Share Score</button>
+                <button id="restart" class="btn">Play Again</button>
               </div>
             </div>
           </div>
         </div>
         <aside class="side side-right">
           <div class="next-card">
-            <span id="label-next" class="hud-label">下一顆</span>
+            <span id="label-next" class="hud-label">NEXT</span>
             <canvas id="next" width="120" height="120"></canvas>
             <span id="next-name" class="next-name"></span>
           </div>
-          <button id="swap" class="btn btn-ghost btn-icon" aria-label="換球">
+          <button id="swap" class="btn btn-ghost btn-icon" aria-label="Swap with next planet">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6.6 9.4 A 6.3 6.3 0 0 1 17.2 7.1" />
               <path d="M17.7 3.8 L17.4 7.6 L13.7 7.3" />
@@ -83,14 +83,14 @@
               <path d="M6.3 20.2 L6.6 16.4 L10.3 16.7" />
             </svg>
           </button>
-          <button id="hammer" class="btn btn-ghost btn-icon" aria-label="小錘子">
+          <button id="hammer" class="btn btn-ghost btn-icon" aria-label="Hammer (smash one planet)">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <rect x="6.2" y="3.8" width="11.6" height="6" rx="2" fill="var(--honey)" />
               <path d="M11.6 9.8 C11.5 13 11.6 16.4 11.9 19.6 C11.9 20.1 12.5 20.1 12.5 19.6 C12.7 16.4 12.6 13 12.4 9.8" fill="var(--honey)" />
             </svg>
             <span id="hammer-count" class="count">1</span>
           </button>
-          <button id="mode" class="btn btn-ghost btn-icon" aria-label="每日挑戰">
+          <button id="mode" class="btn btn-ghost btn-icon" aria-label="Daily Challenge">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <rect x="4.2" y="5.4" width="15.6" height="14" rx="2.6" />
               <path d="M4.5 9.7 H19.5" />
@@ -99,7 +99,7 @@
               <path d="M12 11.6 l1 2 2.1 .4 -1.6 1.5 .4 2.1 -1.9 -1.1 -1.9 1.1 .4 -2.1 -1.6 -1.5 2.1 -.4 z" fill="var(--accent)" stroke="none" />
             </svg>
           </button>
-          <button id="mute" class="btn btn-ghost btn-icon" aria-label="切換音效">
+          <button id="mute" class="btn btn-ghost btn-icon" aria-label="Toggle sound">
             <svg class="icon-sound-on" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4.6 9.5 H7.8 L12.2 5.7 V18.3 L7.8 14.5 H4.6 Z" />
               <path d="M15.2 9.2 C16.7 10.8 16.7 13.2 15.2 14.8" />
@@ -111,7 +111,6 @@
               <path d="M20.1 9.8 L15.8 14.2" />
             </svg>
           </button>
-          <button id="lang" class="btn btn-ghost btn-lang" aria-label="Language">EN</button>
         </aside>
       </div>
 

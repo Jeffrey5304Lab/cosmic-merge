@@ -44,19 +44,18 @@ await page.screenshot({ path: 'screenshots/desktop-playing.png' })
 const score = await page.locator('#score').textContent()
 console.log(`desktop score after 10 drops: ${score}`)
 
-// 手機直向（中文 locale，驗證 i18n 偵測）
-const zhContext = await browser.newContext({
+// 手機直向
+const mobileContext = await browser.newContext({
   viewport: { width: 390, height: 844 },
-  locale: 'zh-TW',
 })
-const mobile = await zhContext.newPage()
+const mobile = await mobileContext.newPage()
 mobile.on('pageerror', e => errors.push(`mobile pageerror: ${e.message}`))
 await mobile.goto(URL, { waitUntil: 'networkidle' })
 await mobile.waitForTimeout(800)
 await mobile.screenshot({ path: 'screenshots/mobile-initial.png' })
 
-const zhLabel = await mobile.locator('#label-score').textContent()
-if (zhLabel !== '分數') errors.push(`zh-TW locale should show 分數, got: ${zhLabel}`)
+const scoreLabel = await mobile.locator('#label-score').textContent()
+if (scoreLabel !== 'SCORE') errors.push(`score label should be SCORE, got: ${scoreLabel}`)
 
 await browser.close()
 

@@ -488,17 +488,6 @@ body {
   display: block;
 }
 
-.btn-lang {
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  font-size: 14px;
-  font-family: var(--font-ui);
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--ink-soft);
-}
-
 /* ── 道具按鈕計數角標 ─────────────── */
 .btn-ghost {
   position: relative;
