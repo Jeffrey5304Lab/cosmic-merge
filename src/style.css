@@ -22,6 +22,8 @@
 html,
 body {
   height: 100%;
+  /* 阻止橡皮筋回彈 / 捲動鏈，避免快速滑動時整個畫面被平移 */
+  overscroll-behavior: none;
 }
 
 body {
@@ -32,10 +34,13 @@ body {
   font-family: var(--font-ui);
   display: flex;
   justify-content: center;
+  /* 固定整個視窗：iOS Safari 快速滑動不會平移頁面/視覺視口 */
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   -webkit-user-select: none;
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
 }
 
 #app {
