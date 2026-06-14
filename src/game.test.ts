@@ -121,25 +121,6 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.bodyCount).toBe(before - 1)
   })
 
-  it('換球 swapNext：current 與 next 互換', () => {
-    let lastNext = -1
-    const cb: GameCallbacks = {
-      onScore() {},
-      onNext(tier) {
-        lastNext = tier
-      },
-      onCombo() {},
-      onGameOver() {},
-    }
-    const game = new Game(cb)
-    const nextBefore = lastNext
-    game.swapNext()
-    // 互換後 onNext 回報的應該是原本的 current（可能與 next 相同階級，至少 callback 有觸發）
-    expect(lastNext).toBeGreaterThanOrEqual(0)
-    game.swapNext()
-    expect(lastNext).toBe(nextBefore) // 換兩次回到原狀
-  })
-
   it('幀率抖動不會把已落定的星球踢飛（固定步長積分）', () => {
     const { game } = makeGame()
     // 丟幾顆並讓它們落定

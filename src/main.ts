@@ -5,7 +5,6 @@ import { drawPlanet } from './render'
 import { isMuted, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
-import { dailySeed, mulberry32 } from './logic'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { ads } from './ads'
 import { addHammer, getHammers, useHammer } from './inventory'
@@ -111,7 +110,7 @@ function renderLeaderboard() {
     const li = document.createElement('li')
     if (lastRank !== null && i === lastRank - 1) li.className = 'me'
     const left = document.createElement('span')
-    left.textContent = `${i + 1}. ${planetName(e.maxTier)}${e.mode === 'daily' ? ' 🗓️' : ''}`
+    left.textContent = `${i + 1}. ${planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
@@ -127,51 +126,27 @@ function renderGameOver() {
   overTitleEl.textContent = STR.overTitle
   overScoreEl.innerHTML = STR.overScore(score)
   overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
-  let sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
-  if (mode === 'daily') sub += ` · ${STR.dailyBest(Math.max(getDailyBest(), score))}`
+  const sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
   overSubEl.textContent = sub
   renderLeaderboard()
 }
-
-/* ── 模式：經典 / 每日挑戰 ── */
-type Mode = 'classic' | 'daily'
-let mode: Mode = 'classic'
 
 function todayKey(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function getDailyBest(): number {
-  try {
-    return Number(localStorage.getItem(`cosmic-merge:daily-best:${todayKey()}`)) || 0
-  } catch {
-    return 0
-  }
-}
-
-function saveDailyBest(score: number) {
-  try {
-    const key = `cosmic-merge:daily-best:${todayKey()}`
-    if (score > getDailyBest()) localStorage.setItem(key, String(score))
-  } catch {
-    /* 私密模式忽略 */
-  }
-}
-
 /* ── 遊戲實例 ── */
 const game = new Game({
   onScore(score, best, maxTier) {
     popValue(scoreEl, score)
-    // 每日挑戰模式：最佳欄顯示今日最佳
-    bestEl.textContent = String(mode === 'daily' ? Math.max(getDailyBest(), score) : best)
+    bestEl.textContent = String(best)
     if (maxTier !== bestMergeTier) renderBestMerge(maxTier)
   },
   onNext: renderNext,
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
-    if (mode === 'daily') saveDailyBest(score)
-    lastEntry = { score, maxTier, date: todayKey(), mode }
+    lastEntry = { score, maxTier, date: todayKey() }
     lastRank = addScore(lastEntry)
     lastResult = { score, best, maxTier }
     reviveBtn.classList.toggle('hidden', game.reviveUsed || score === 0)
@@ -198,29 +173,7 @@ reviveBtn.addEventListener('click', async () => {
   overlayEl.classList.add('hidden')
 })
 
-/* ── 模式切換 ── */
-const modeBtn = $<HTMLButtonElement>('mode')
-const modeBadge = $<HTMLDivElement>('mode-badge')
-
-function applyMode() {
-  modeBtn.classList.toggle('active', mode === 'daily')
-  modeBadge.classList.toggle('hidden', mode !== 'daily')
-  modeBadge.textContent = `🗓️ ${STR.daily}`
-  overlayEl.classList.add('hidden')
-  lastResult = null
-  renderBestMerge(0)
-  // 每日挑戰：日期種子 → 全世界今天同一套星球序列
-  game.restart(mode === 'daily' ? mulberry32(dailySeed()) : Math.random)
-}
-
-modeBtn.addEventListener('click', () => {
-  mode = mode === 'daily' ? 'classic' : 'daily'
-  applyMode()
-  modeBtn.blur()
-})
-
-/* ── 道具：換球 + 小錘子 ── */
-const swapBtn = $<HTMLButtonElement>('swap')
+/* ── 道具：小錘子 ── */
 const hammerBtn = $<HTMLButtonElement>('hammer')
 const hammerCountEl = $<HTMLSpanElement>('hammer-count')
 const hintEl = $<HTMLDivElement>('hint')
@@ -237,11 +190,6 @@ function exitSmashMode() {
   hammerBtn.classList.remove('armed')
   hintEl.classList.add('hidden')
 }
-
-swapBtn.addEventListener('click', () => {
-  game.swapNext()
-  swapBtn.blur()
-})
 
 hammerBtn.addEventListener('click', async () => {
   hammerBtn.blur()
@@ -281,8 +229,7 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   lastResult = null
   lastEntry = null
   exitSmashMode()
-  // 每日挑戰重開＝同一套今日序列
-  game.restart(mode === 'daily' ? mulberry32(dailySeed()) : undefined)
+  game.restart()
 })
 
 muteBtn.classList.toggle('muted', isMuted())
@@ -327,10 +274,7 @@ function applyStrings() {
   shareBtn.textContent = STR.share
   $<HTMLButtonElement>('restart').textContent = STR.restart
   muteBtn.setAttribute('aria-label', STR.mute)
-  modeBtn.setAttribute('aria-label', STR.daily)
-  modeBadge.textContent = `🗓️ ${STR.daily}`
   reviveBtn.textContent = STR.revive
-  swapBtn.setAttribute('aria-label', STR.swap)
   hammerBtn.setAttribute('aria-label', STR.hammer)
   nextNameEl.textContent = planetName(lastNextTier)
   renderBestMerge(bestMergeTier)

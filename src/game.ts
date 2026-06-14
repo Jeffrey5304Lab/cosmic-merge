@@ -167,14 +167,6 @@ export class Game {
     return false
   }
 
-  /** 換球：current 和 next 互換（不影響種子序列，每日挑戰也公平） */
-  swapNext() {
-    if (this.state === 'over') return
-    ;[this.currentTier, this.nextDropTier] = [this.nextDropTier, this.currentTier]
-    this.aim(this.aimX) // 半徑變了，重新夾住範圍
-    this.cb.onNext(this.nextDropTier)
-  }
-
   /** 玩家瞄準（邏輯座標 x） */
   aim(x: number) {
     const r = TIERS[this.currentTier].radius

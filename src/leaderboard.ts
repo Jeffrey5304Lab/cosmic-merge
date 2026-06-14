@@ -4,7 +4,6 @@ export interface LeaderboardEntry {
   maxTier: number
   /** YYYY-MM-DD */
   date: string
-  mode: 'classic' | 'daily'
 }
 
 const KEY = 'cosmic-merge:leaderboard'
@@ -54,11 +53,7 @@ export function addScore(entry: LeaderboardEntry): number | null {
 export function removeScore(entry: LeaderboardEntry): void {
   const board = loadLeaderboard()
   const i = board.findIndex(
-    e =>
-      e.score === entry.score &&
-      e.date === entry.date &&
-      e.mode === entry.mode &&
-      e.maxTier === entry.maxTier,
+    e => e.score === entry.score && e.date === entry.date && e.maxTier === entry.maxTier,
   )
   if (i < 0) return
   board.splice(i, 1)

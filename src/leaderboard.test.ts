@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { insertEntry, MAX_ENTRIES, type LeaderboardEntry } from './leaderboard'
 
-function entry(score: number, mode: 'classic' | 'daily' = 'classic'): LeaderboardEntry {
-  return { score, maxTier: 5, date: '2026-06-12', mode }
+function entry(score: number): LeaderboardEntry {
+  return { score, maxTier: 5, date: '2026-06-12' }
 }
 
 describe('排行榜 insertEntry', () => {
