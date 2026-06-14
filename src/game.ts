@@ -83,7 +83,9 @@ export class Game {
     this.nextDropTier = pickDropTier(this.rng)
     this.engine.gravity.y = 1.1
     this.buildWalls()
-    Events.on(this.engine, 'collisionStart', e => {
+    // 同階碰撞就排入合成佇列。collisionStart=剛接觸、collisionActive=持續接觸，
+    // 兩者都聽：落定後才貼在一起的同階星球（看起來碰到卻沒合）也會被合掉。
+    const queueMergeable = (e: Matter.IEventCollision<Matter.Engine>) => {
       for (const pair of e.pairs) {
         const ma = this.meta.get(pair.bodyA)
         const mb = this.meta.get(pair.bodyB)
@@ -91,7 +93,9 @@ export class Game {
           this.mergeQueue.push({ a: pair.bodyA, b: pair.bodyB })
         }
       }
-    })
+    }
+    Events.on(this.engine, 'collisionStart', queueMergeable)
+    Events.on(this.engine, 'collisionActive', queueMergeable)
     this.cb.onNext(this.nextDropTier)
     this.cb.onScore(this.score, this.best, this.maxTierReached)
   }

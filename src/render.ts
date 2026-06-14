@@ -448,13 +448,13 @@ export function drawPlanet(
     g.lineWidth = r * 0.15
     g.globalAlpha = 0.95
     g.beginPath()
-    g.ellipse(0, 0, r * 1.45, r * 0.42, 0, Math.PI * 0.05, Math.PI * 0.95)
+    g.ellipse(0, 0, r * 1.28, r * 0.4, 0, Math.PI * 0.05, Math.PI * 0.95)
     g.stroke()
     g.strokeStyle = INK
     g.lineWidth = Math.max(1.2, r * 0.02)
     g.globalAlpha = 0.5
     g.beginPath()
-    g.ellipse(0, 0, r * 1.52, r * 0.46, 0, Math.PI * 0.08, Math.PI * 0.92)
+    g.ellipse(0, 0, r * 1.34, r * 0.44, 0, Math.PI * 0.08, Math.PI * 0.92)
     g.stroke()
     g.restore()
   }
@@ -484,13 +484,13 @@ export function drawPlanet(
     g.strokeStyle = '#E5C684'
     g.lineWidth = r * 0.15
     g.beginPath()
-    g.ellipse(0, 0, r * 1.45, r * 0.42, 0, Math.PI * 1.05, Math.PI * 1.95)
+    g.ellipse(0, 0, r * 1.28, r * 0.4, 0, Math.PI * 1.05, Math.PI * 1.95)
     g.stroke()
     g.strokeStyle = INK
     g.lineWidth = Math.max(1.2, r * 0.02)
     g.globalAlpha = 0.5
     g.beginPath()
-    g.ellipse(0, 0, r * 1.52, r * 0.46, 0, Math.PI * 1.08, Math.PI * 1.92)
+    g.ellipse(0, 0, r * 1.34, r * 0.44, 0, Math.PI * 1.08, Math.PI * 1.92)
     g.stroke()
     g.restore()
   }
