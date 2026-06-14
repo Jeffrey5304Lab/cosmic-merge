@@ -24,6 +24,7 @@ body {
   height: 100%;
   /* 阻止橡皮筋回彈 / 捲動鏈，避免快速滑動時整個畫面被平移 */
   overscroll-behavior: none;
+  overflow: hidden;
 }
 
 body {
@@ -51,7 +52,8 @@ body {
   padding: 12px;
   width: 100%;
   max-width: 960px;
-  height: 100dvh;
+  /* 用 100%（對齊固定 body）而非 100dvh，避免 iOS 工具列顯隱時版面跳動 */
+  height: 100%;
 }
 
 /* ── HUD ───────────────────────────── */
