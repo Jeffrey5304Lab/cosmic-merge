@@ -410,6 +410,14 @@ window.addEventListener('keydown', () => startMusic(), { once: true })
 
 /* ── PWA 離線（只在正式版註冊，避免 dev 快取干擾） ── */
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  // 新版 SW（skipWaiting + clients.claim）接管時自動重整一次，
+  // 讓使用者打開網站就拿到最新版，不必手動關分頁。
+  let refreshing = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return
+    refreshing = true
+    window.location.reload()
+  })
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
       /* SW 註冊失敗不影響遊戲 */
