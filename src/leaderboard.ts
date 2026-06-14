@@ -4,6 +4,8 @@ export interface LeaderboardEntry {
   maxTier: number
   /** YYYY-MM-DD */
   date: string
+  /** Player-entered name (optional for backwards compat with old entries). */
+  name?: string
 }
 
 const KEY = 'cosmic-merge:leaderboard'

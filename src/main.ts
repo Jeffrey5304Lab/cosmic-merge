@@ -6,6 +6,8 @@ import { isMuted, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
+import { REMOTE_ENABLED } from './config'
+import { fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
 import { addHammer, getHammers, useHammer } from './inventory'
 
@@ -32,6 +34,23 @@ const overScoreEl = $<HTMLParagraphElement>('over-score')
 const overSubEl = $<HTMLParagraphElement>('over-sub')
 const overEmojiEl = $<HTMLParagraphElement>('over-emoji')
 const muteBtn = $<HTMLButtonElement>('mute')
+const nameInput = $<HTMLInputElement>('name-input')
+
+/* ── 玩家名稱（記住在 localStorage） ── */
+const NAME_KEY = 'cosmic-merge:name'
+nameInput.placeholder = STR.namePlaceholder
+nameInput.value = localStorage.getItem(NAME_KEY) ?? ''
+nameInput.addEventListener('input', () => {
+  try {
+    localStorage.setItem(NAME_KEY, nameInput.value.trim().slice(0, 16))
+  } catch {
+    /* 私密模式忽略 */
+  }
+})
+
+function getPlayerName(): string {
+  return nameInput.value.trim().slice(0, 16)
+}
 
 const dpr = Math.min(window.devicePixelRatio || 1, 2)
 canvas.width = BOARD.width * dpr
@@ -110,7 +129,39 @@ function renderLeaderboard() {
     const li = document.createElement('li')
     if (lastRank !== null && i === lastRank - 1) li.className = 'me'
     const left = document.createElement('span')
-    left.textContent = `${i + 1}. ${planetName(e.maxTier)}`
+    left.textContent = `${i + 1}. ${e.name || planetName(e.maxTier)}`
+    const right = document.createElement('span')
+    right.className = 'b-score'
+    right.textContent = String(e.score)
+    li.append(left, right)
+    list.appendChild(li)
+  })
+}
+
+async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
+  $('board-title').textContent = STR.globalLeaderboard
+  const list = $<HTMLOListElement>('board-list')
+  const entries = await fetchTopScores(10)
+  list.innerHTML = ''
+  if (entries.length === 0) {
+    const li = document.createElement('li')
+    li.className = 'b-empty'
+    li.textContent = STR.noScores
+    list.appendChild(li)
+    return
+  }
+  entries.forEach((e, i) => {
+    const li = document.createElement('li')
+    if (
+      highlight &&
+      e.name === highlight.name &&
+      e.score === highlight.score &&
+      e.maxTier === highlight.maxTier
+    ) {
+      li.className = 'me'
+    }
+    const left = document.createElement('span')
+    left.textContent = `${i + 1}. ${e.name}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
@@ -128,7 +179,7 @@ function renderGameOver() {
   overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
   const sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
   overSubEl.textContent = sub
-  renderLeaderboard()
+  if (!REMOTE_ENABLED) renderLeaderboard()
 }
 
 function todayKey(): string {
@@ -146,18 +197,36 @@ const game = new Game({
   onNext: renderNext,
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
-    lastEntry = { score, maxTier, date: todayKey() }
+    const name = getPlayerName()
+    lastEntry = { score, maxTier, date: todayKey(), name: name || undefined }
     lastRank = addScore(lastEntry)
     lastResult = { score, best, maxTier }
-    reviveBtn.classList.toggle('hidden', game.reviveUsed || score === 0)
+    const canRevive = !game.reviveUsed && score > 0
+    reviveBtn.classList.toggle('hidden', !canRevive)
     renderGameOver()
     overlayEl.classList.remove('hidden')
+
+    if (REMOTE_ENABLED) {
+      const remoteEntry: RemoteScoreEntry = { name: name || 'Anonymous', score, maxTier }
+      if (canRevive) {
+        pendingRemoteEntry = remoteEntry
+        void renderGlobalLeaderboard(null)
+      } else {
+        const toSubmit = pendingRemoteEntry ?? remoteEntry
+        pendingRemoteEntry = null
+        void (async () => {
+          await submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier)
+          await renderGlobalLeaderboard(toSubmit)
+        })()
+      }
+    }
   },
 })
 
 /* ── 復活（獎勵式廣告位） ── */
 const reviveBtn = $<HTMLButtonElement>('revive')
 let lastEntry: LeaderboardEntry | null = null
+let pendingRemoteEntry: RemoteScoreEntry | null = null
 
 reviveBtn.addEventListener('click', async () => {
   reviveBtn.disabled = true
@@ -228,6 +297,11 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   overlayEl.classList.add('hidden')
   lastResult = null
   lastEntry = null
+  if (pendingRemoteEntry) {
+    const toSubmit = pendingRemoteEntry
+    pendingRemoteEntry = null
+    void submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier)
+  }
   exitSmashMode()
   game.restart()
 })

@@ -351,6 +351,28 @@ body {
   font-size: 14px;
 }
 
+/* ── 玩家名稱輸入 ─────────────────── */
+.name-input {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 16px;
+  text-align: center;
+  outline: none;
+}
+
+.name-input::placeholder {
+  color: var(--text-dim);
+}
+
+.name-input:focus {
+  border-color: var(--accent);
+}
+
 /* ── 排行榜 ───────────────────────── */
 .board {
   display: flex;
