@@ -140,6 +140,23 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(lastNext).toBe(nextBefore) // 換兩次回到原狀
   })
 
+  it('幀率抖動不會把已落定的星球踢飛（固定步長積分）', () => {
+    const { game } = makeGame()
+    // 丟幾顆並讓它們落定
+    simulate(game, 8, 0.5)
+    for (let i = 0; i < 180; i++) game.update(1 / 60)
+    const restSpeed = game.maxBodySpeed
+    // 模擬點擊/重排造成的卡頓：dt 忽快忽慢
+    let maxSeen = 0
+    for (let i = 0; i < 120; i++) {
+      const dt = i % 2 === 0 ? 1 / 60 : 1 / 18 // ~55ms 尖峰
+      game.update(dt)
+      maxSeen = Math.max(maxSeen, game.maxBodySpeed)
+    }
+    // 固定步長下，抖動不應讓速度暴衝
+    expect(maxSeen).toBeLessThan(restSpeed + 2)
+  })
+
   it('restart 重置分數與狀態，可以再玩', () => {
     const { game, events } = makeGame()
     simulate(game, 8, 0.5)

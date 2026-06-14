@@ -63,6 +63,8 @@ export class Game {
   private meteors = new ShootingStars()
   private combo = new ComboTracker()
   private time = 0
+  /** 物理固定步長累積器（秒）：讓 Engine.update 每次都用相同 delta */
+  private accumulator = 0
   private currentTier: number
   private nextDropTier: number
   private aimX = BOARD.width / 2
@@ -198,6 +200,7 @@ export class Game {
     this.maxTierReached = 0
     this.dangerTime = 0
     this.dropCooldown = 0
+    this.accumulator = 0
     this.reviveUsed = false
     this.state = 'ready'
     this.currentTier = pickDropTier(this.rng)
@@ -213,7 +216,18 @@ export class Game {
     this.shake = Math.max(0, this.shake - dt * 30)
 
     if (this.state !== 'over') {
-      Engine.update(this.engine, Math.min(dt, 1 / 30) * 1000)
+      // 固定步長積分：每次 Engine.update 都用同一個 delta（1/60 秒），
+      // matter-js 的速度校正恆為 1，幀率波動/點擊卡頓不再讓星球彈跳。
+      const step = 1 / 60
+      this.accumulator += dt
+      let steps = 0
+      while (this.accumulator >= step && steps < 5) {
+        Engine.update(this.engine, step * 1000)
+        this.accumulator -= step
+        steps += 1
+      }
+      // 一次累積過多（分頁切回/長卡頓）：丟棄殘餘，避免追幀爆衝
+      if (this.accumulator > step) this.accumulator = 0
       this.processMerges()
       this.checkGameOver(dt)
     }
@@ -297,6 +311,16 @@ export class Game {
       if (this.meta.has(body)) n++
     }
     return n
+  }
+
+  /** 場上最快星球速度（px/step），供測試與 debug：用來偵測物理是否被踢飛 */
+  get maxBodySpeed(): number {
+    let m = 0
+    for (const body of Composite.allBodies(this.engine.world)) {
+      if (!this.meta.has(body)) continue
+      m = Math.max(m, Math.hypot(body.velocity.x, body.velocity.y))
+    }
+    return m
   }
 
   draw(g: CanvasRenderingContext2D) {
