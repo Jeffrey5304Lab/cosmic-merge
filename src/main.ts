@@ -212,7 +212,8 @@ const game = new Game({
         pendingRemoteEntry = remoteEntry
         void renderGlobalLeaderboard(null)
       } else {
-        const toSubmit = pendingRemoteEntry ?? remoteEntry
+        // 用本次（復活後最終）成績送出，不是復活前暫存的舊分數
+        const toSubmit = remoteEntry
         pendingRemoteEntry = null
         void (async () => {
           await submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier)

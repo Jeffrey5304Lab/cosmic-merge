@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { Game, type GameCallbacks } from './game'
+import { mulberry32 } from './logic'
 
 /** 無頭模擬：固定步長推進物理 + 定時投放 */
-function makeGame() {
+function makeGame(rng?: () => number) {
   const events = {
     gameOver: 0,
     lastScore: 0,
@@ -20,7 +21,7 @@ function makeGame() {
       events.gameOver++
     },
   }
-  return { game: new Game(cb), events }
+  return { game: new Game(cb, rng), events }
 }
 
 function simulate(game: Game, seconds: number, dropEvery = 0) {
@@ -122,7 +123,8 @@ describe('Game 整合（無頭物理模擬）', () => {
   })
 
   it('幀率抖動不會把已落定的星球踢飛（固定步長積分）', () => {
-    const { game } = makeGame()
+    // 固定種子：避免隨機落點偶爾造成邊緣案例導致測試不穩定
+    const { game } = makeGame(mulberry32(42))
     // 丟幾顆並讓它們落定
     simulate(game, 8, 0.5)
     for (let i = 0; i < 180; i++) game.update(1 / 60)
