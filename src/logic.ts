@@ -21,7 +21,7 @@ export function pickDropTier(rng: () => number = Math.random): number {
   return 0
 }
 
-/** 決定性 PRNG（mulberry32）：每日挑戰用，同種子＝同星球序列 */
+/** 決定性 PRNG（mulberry32）：同種子＝同輸出序列，供測試固定亂數用 */
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0
   return () => {
@@ -30,22 +30,6 @@ export function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
-}
-
-/** 字串 hash（FNV-1a），把日期字串變成種子 */
-export function hashString(s: string): number {
-  let h = 0x811c9dc5
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  return h >>> 0
-}
-
-/** 今日挑戰種子（本地時區的 YYYY-MM-DD） */
-export function dailySeed(date = new Date()): number {
-  const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  return hashString(`cosmic-merge:${key}`)
 }
 
 /** 兩顆同階星球合體後的階級；已達最高階回傳 null（太陽不再合成） */

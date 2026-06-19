@@ -38,7 +38,7 @@ Drop cute planets into a storybook night sky and merge your way from Meteor to t
 ```bash
 npm install
 npm run dev      # 開發伺服器
-npm test         # vitest（31 tests：純邏輯 + 無頭物理整合）
+npm test         # vitest（29 tests：純邏輯 + 無頭物理整合）
 npm run build    # 產線建置（tsc + vite）
 node scripts/screenshot.mjs   # Playwright 截圖驗收（需全域 playwright）
 ```

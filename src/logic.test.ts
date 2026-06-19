@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ComboTracker, dailySeed, hashString, mergeScore, mulberry32, nextTier, pickDropTier } from './logic'
+import { ComboTracker, mergeScore, mulberry32, nextTier, pickDropTier } from './logic'
 import { BOARD, DROPPABLE_TIERS, MAX_TIER, TIERS } from './planets'
 
 describe('TIERS 設定', () => {
@@ -82,7 +82,7 @@ describe('pickDropTier', () => {
   })
 })
 
-describe('每日挑戰種子', () => {
+describe('mulberry32（決定性 PRNG）', () => {
   it('同種子 → 同星球序列（決定性）', () => {
     const a = mulberry32(12345)
     const b = mulberry32(12345)
@@ -91,20 +91,8 @@ describe('每日挑戰種子', () => {
     expect(seqA).toEqual(seqB)
   })
 
-  it('不同日期 → 不同種子', () => {
-    expect(dailySeed(new Date('2026-06-12T10:00:00'))).not.toBe(
-      dailySeed(new Date('2026-06-13T10:00:00')),
-    )
-  })
-
-  it('同一天不同時間 → 同種子', () => {
-    expect(dailySeed(new Date('2026-06-12T00:01:00'))).toBe(
-      dailySeed(new Date('2026-06-12T23:59:00')),
-    )
-  })
-
-  it('mulberry32 輸出落在 [0, 1)', () => {
-    const rng = mulberry32(hashString('test'))
+  it('輸出落在 [0, 1)', () => {
+    const rng = mulberry32(42)
     for (let i = 0; i < 1000; i++) {
       const v = rng()
       expect(v).toBeGreaterThanOrEqual(0)

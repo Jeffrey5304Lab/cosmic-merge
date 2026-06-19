@@ -186,9 +186,8 @@ export class Game {
     this.dropCooldown = 0.45
   }
 
-  /** 重新開始；傳入 rng 可切換模式（每日挑戰＝種子序列） */
-  restart(rng?: () => number) {
-    if (rng) this.rng = rng
+  /** 重新開始 */
+  restart() {
     Composite.clear(this.engine.world, false)
     this.buildWalls()
     this.mergeQueue = []

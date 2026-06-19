@@ -125,7 +125,7 @@ const errors = []
   await ctx.close()
 }
 
-/* ═══ 4. 模式切換 + 鍵盤操作 ═══ */
+/* ═══ 4. 鍵盤操作 ═══ */
 {
   const page = await browser.newPage({ viewport: { width: 1280, height: 860 } })
   page.on('pageerror', e => errors.push(e.message))
@@ -141,16 +141,6 @@ const errors = []
     changed = (await page.locator('#next-name').textContent()) !== before
   }
   check('鍵盤空白鍵可投放', changed)
-
-  await page.locator('#mode').click()
-  await page.waitForTimeout(300)
-  const badgeOn = await page.locator('#mode-badge').isVisible()
-  const scoreReset = (await page.locator('#score').textContent()) === '0'
-  check('切每日挑戰：badge 顯示 + 分數歸零', badgeOn && scoreReset)
-  await page.locator('#mode').click()
-  await page.waitForTimeout(300)
-  const badgeOff = await page.locator('#mode-badge').isHidden()
-  check('切回經典：badge 隱藏', badgeOff)
   await page.close()
 }
 

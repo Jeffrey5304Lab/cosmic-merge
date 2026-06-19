@@ -109,7 +109,7 @@ function popValue(el: HTMLElement, value: number) {
   }
 }
 
-/* ── 結算內容（語言切換時需要重畫） ── */
+/* ── 結算內容 ── */
 let lastResult: { score: number; best: number; maxTier: number } | null = null
 let lastRank: number | null = null
 
@@ -138,10 +138,14 @@ function renderLeaderboard() {
   })
 }
 
+let globalLeaderboardRequestId = 0
 async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
+  const requestId = ++globalLeaderboardRequestId
   $('board-title').textContent = STR.globalLeaderboard
   const list = $<HTMLOListElement>('board-list')
   const entries = await fetchTopScores(10)
+  // 慢的舊請求在新請求之後才回來：放棄，避免覆蓋掉較新的榜況
+  if (requestId !== globalLeaderboardRequestId) return
   list.innerHTML = ''
   if (entries.length === 0) {
     const li = document.createElement('li')
@@ -198,7 +202,7 @@ const game = new Game({
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
     const name = getPlayerName()
-    lastEntry = { score, maxTier, date: todayKey(), name: name || undefined }
+    lastEntry = { score, maxTier, date: todayKey(), name: name || undefined, id: crypto.randomUUID() }
     lastRank = addScore(lastEntry)
     lastResult = { score, best, maxTier }
     const canRevive = !game.reviveUsed && score > 0

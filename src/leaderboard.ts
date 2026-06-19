@@ -1,3 +1,5 @@
+import { MAX_TIER } from './planets'
+
 /** 本地排行榜：localStorage 保存前 10 名 */
 export interface LeaderboardEntry {
   score: number
@@ -6,6 +8,8 @@ export interface LeaderboardEntry {
   date: string
   /** Player-entered name (optional for backwards compat with old entries). */
   name?: string
+  /** Unique per-entry id (optional for backwards compat with old entries). */
+  id?: string
 }
 
 const KEY = 'cosmic-merge:leaderboard'
@@ -19,7 +23,12 @@ export function loadLeaderboard(): LeaderboardEntry[] {
     if (!Array.isArray(parsed)) return []
     return parsed.filter(
       (e): e is LeaderboardEntry =>
-        typeof e === 'object' && e !== null && typeof (e as LeaderboardEntry).score === 'number',
+        typeof e === 'object' &&
+        e !== null &&
+        typeof (e as LeaderboardEntry).score === 'number' &&
+        typeof (e as LeaderboardEntry).maxTier === 'number' &&
+        (e as LeaderboardEntry).maxTier >= 0 &&
+        (e as LeaderboardEntry).maxTier <= MAX_TIER,
     )
   } catch {
     return []
@@ -54,9 +63,13 @@ export function addScore(entry: LeaderboardEntry): number | null {
 /** 撤掉一筆成績（玩家復活續玩時，撤回剛記錄的那筆，避免同一局上榜兩次） */
 export function removeScore(entry: LeaderboardEntry): void {
   const board = loadLeaderboard()
-  const i = board.findIndex(
-    e => e.score === entry.score && e.date === entry.date && e.maxTier === entry.maxTier,
-  )
+  // 用 id 比對（同分同日多筆時，純比值會誤刪別局的合法紀錄）；
+  // 沒有 id 的舊資料才退回比值比對。
+  const i = entry.id
+    ? board.findIndex(e => e.id === entry.id)
+    : board.findIndex(
+        e => e.score === entry.score && e.date === entry.date && e.maxTier === entry.maxTier,
+      )
   if (i < 0) return
   board.splice(i, 1)
   try {
