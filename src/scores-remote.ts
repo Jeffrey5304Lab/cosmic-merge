@@ -72,15 +72,19 @@ export async function fetchRank(score: number): Promise<{ rank: number; gap: num
   }
 }
 
-/** Fetch the top global scores, highest first. Returns [] on failure. */
-export async function fetchTopScores(limit = 10): Promise<RemoteScoreEntry[]> {
+/**
+ * Fetch the top scores, highest first. Pass `country` (ISO alpha-2) to filter
+ * to one country's board. Returns [] on failure.
+ */
+export async function fetchTopScores(limit = 10, country?: string): Promise<RemoteScoreEntry[]> {
   if (!REMOTE_ENABLED) return []
+  const filter = country ? `&country=eq.${encodeURIComponent(country)}` : ''
   const url = (select: string) =>
-    `${SUPABASE_URL}/rest/v1/scores?select=${select}&order=score.desc&limit=${limit}`
+    `${SUPABASE_URL}/rest/v1/scores?select=${select}&order=score.desc&limit=${limit}${filter}`
   try {
-    // 先試帶 country；欄位未建時 (400) 退回不帶，榜單照常顯示
+    // 先試帶 country；欄位未建時 (400) 退回不帶（僅在沒篩選國家時），榜單照常顯示
     let res = await fetch(url('name,score,max_tier,country'), { headers: headers() })
-    if (!res.ok) res = await fetch(url('name,score,max_tier'), { headers: headers() })
+    if (!res.ok && !country) res = await fetch(url('name,score,max_tier'), { headers: headers() })
     if (!res.ok) return []
     const rows: unknown = await res.json()
     if (!Array.isArray(rows)) return []

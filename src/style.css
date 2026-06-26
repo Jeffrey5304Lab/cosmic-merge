@@ -520,6 +520,34 @@ body {
   line-height: 1;
 }
 
+/* ── 排行榜分頁（全球 / 我的國家） ─────────────── */
+.lb-tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.lb-tabs.hidden {
+  display: none;
+}
+
+.lb-tab {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.lb-tab.active {
+  color: var(--ink);
+  background: rgba(243, 203, 87, 0.35);
+}
+
 #mute .icon-sound-off,
 #mute.muted .icon-sound-on {
   display: none;

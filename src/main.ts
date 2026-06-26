@@ -544,8 +544,12 @@ const leaderboardModal = $<HTMLDivElement>('leaderboard-modal')
 const lbTitleEl = $<HTMLSpanElement>('lb-title')
 const lbListEl = $<HTMLOListElement>('lb-list')
 const leaderboardBtn = $<HTMLButtonElement>('leaderboard-btn')
+const lbTabsEl = $<HTMLDivElement>('lb-tabs')
+const lbTabGlobal = $<HTMLButtonElement>('lb-tab-global')
+const lbTabMine = $<HTMLButtonElement>('lb-tab-mine')
 let paused = false
 let lbRequestId = 0
+let lbMode: 'global' | 'mine' = 'global'
 
 function fillBoard(
   list: HTMLOListElement,
@@ -574,21 +578,43 @@ function fillBoard(
 }
 
 async function renderModalLeaderboard() {
-  if (REMOTE_ENABLED) {
-    lbTitleEl.textContent = STR.globalLeaderboard
-    const reqId = ++lbRequestId
-    lbListEl.innerHTML = '<li class="b-empty">…</li>'
-    const entries = await fetchTopScores(10)
-    if (reqId !== lbRequestId) return // 舊請求慢回：放棄，避免覆蓋新榜
-    fillBoard(lbListEl, entries)
-  } else {
+  if (!REMOTE_ENABLED) {
     lbTitleEl.textContent = STR.leaderboard
     fillBoard(lbListEl, loadLeaderboard().slice(0, 10))
+    return
   }
+  const country = getCountry()
+  const mine = lbMode === 'mine' && country
+  lbTitleEl.textContent = mine
+    ? `${flagEmoji(country)} ${countryName(country).toUpperCase()} TOP`
+    : STR.globalLeaderboard
+  const reqId = ++lbRequestId
+  lbListEl.innerHTML = '<li class="b-empty">…</li>'
+  const entries = await fetchTopScores(10, mine ? country : undefined)
+  if (reqId !== lbRequestId) return // 舊請求慢回：放棄，避免覆蓋新榜
+  fillBoard(lbListEl, entries)
+}
+
+/** 依現況更新分頁列：離線或未選國家時隱藏分頁，回到全球 */
+function syncTabs() {
+  const country = getCountry()
+  const showTabs = REMOTE_ENABLED && !!country
+  lbTabsEl.classList.toggle('hidden', !showTabs)
+  if (!showTabs) lbMode = 'global'
+  lbTabMine.textContent = country ? `${flagEmoji(country)} My country` : 'My country'
+  lbTabGlobal.classList.toggle('active', lbMode === 'global')
+  lbTabMine.classList.toggle('active', lbMode === 'mine')
+}
+
+function setLbMode(mode: 'global' | 'mine') {
+  lbMode = mode
+  syncTabs()
+  void renderModalLeaderboard()
 }
 
 function openLeaderboard() {
   paused = true
+  syncTabs()
   leaderboardModal.classList.remove('hidden')
   void renderModalLeaderboard()
 }
@@ -601,6 +627,8 @@ leaderboardBtn.addEventListener('click', () => {
   leaderboardBtn.blur()
   openLeaderboard()
 })
+lbTabGlobal.addEventListener('click', () => setLbMode('global'))
+lbTabMine.addEventListener('click', () => setLbMode('mine'))
 $<HTMLButtonElement>('lb-close').addEventListener('click', closeLeaderboard)
 leaderboardModal.addEventListener('click', (e) => {
   if (e.target === leaderboardModal) closeLeaderboard() // 點背景關閉
