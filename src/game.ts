@@ -76,8 +76,8 @@ export class Game {
   private dangerTime = 0
   private shake = 0
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
-  /** 本物理步各星球累計的接觸穿透量（被壓越深越大），每步重置 */
-  private pressure = new Map<Matter.Body, number>()
+  /** 本物理步各星球貼到的鄰居星球集合（被越多顆包圍＝被擠越緊），每步重置 */
+  private contacts = new Map<Matter.Body, Set<Matter.Body>>()
   /** 自上次投放後玩家「懸停未投」的秒數（閒置擠壓用） */
   private waitTime = 0
 
@@ -104,17 +104,14 @@ export class Game {
     }
     Events.on(this.engine, 'collisionStart', queueMergeable)
     Events.on(this.engine, 'collisionActive', queueMergeable)
-    // 持續接觸時累計每顆星球的穿透深度 → 推斷被擠壓的程度
+    // 持續接觸時記錄每顆星球被「幾顆星球」貼著（用 Set 去重，跨子步不重複計）
+    // → 被越多鄰居包圍＝被擠得越緊。比穿透深度可靠：堆疊靜止後穿透量趨近 0。
     Events.on(this.engine, 'collisionActive', (e: Matter.IEventCollision<Matter.Engine>) => {
       for (const pair of e.pairs) {
-        const depth = pair.collision?.depth ?? 0
-        if (depth <= 0) continue
-        if (this.meta.has(pair.bodyA)) {
-          this.pressure.set(pair.bodyA, (this.pressure.get(pair.bodyA) ?? 0) + depth)
-        }
-        if (this.meta.has(pair.bodyB)) {
-          this.pressure.set(pair.bodyB, (this.pressure.get(pair.bodyB) ?? 0) + depth)
-        }
+        // 只算星球對星球（牆不算）：孤立靜置的球不會被誤判為被擠
+        if (!this.meta.has(pair.bodyA) || !this.meta.has(pair.bodyB)) continue
+        this.addContact(pair.bodyA, pair.bodyB)
+        this.addContact(pair.bodyB, pair.bodyA)
       }
     })
     this.cb.onNext(this.nextDropTier)
@@ -219,7 +216,7 @@ export class Game {
     this.dropCooldown = 0
     this.accumulator = 0
     this.waitTime = 0
-    this.pressure.clear()
+    this.contacts.clear()
     this.reviveUsed = false
     this.state = 'ready'
     this.currentTier = pickDropTier(this.rng)
@@ -240,7 +237,7 @@ export class Game {
       const step = 1 / 60
       this.accumulator += dt
       let steps = 0
-      this.pressure.clear() // 重置後由 collisionActive 重新累計本步的接觸壓力
+      this.contacts.clear() // 重置後由 collisionActive 重新統計本步的鄰居接觸
       while (this.accumulator >= step && steps < 5) {
         Engine.update(this.engine, step * 1000)
         this.accumulator -= step
@@ -258,18 +255,28 @@ export class Game {
     this.meteors.update(dt, this.time)
   }
 
-  /** 把本步的接觸壓力 + 閒置等待折算成各星球平滑的擠壓痛苦值 */
+  /** 記錄 a 被鄰居 b 貼著（本物理步內去重） */
+  private addContact(a: Matter.Body, b: Matter.Body) {
+    let set = this.contacts.get(a)
+    if (!set) {
+      set = new Set()
+      this.contacts.set(a, set)
+    }
+    set.add(b)
+  }
+
+  /** 把鄰居擠壓 + 閒置等待折算成各星球平滑的擠壓痛苦值 */
   private updateSqueeze(dt: number) {
-    // 閒置 5 秒後開始，再 4 秒爬到 0.7（不到滿，物理壓爆才最痛）
+    // 閒置 5 秒後開始，再 4 秒爬到 0.7（不到滿，被擠爆才最痛）
     const idle = Math.min(0.7, Math.max(0, (this.waitTime - 5) / 4))
     for (const body of Composite.allBodies(this.engine.world)) {
       const m = this.meta.get(body)
       if (!m) continue
-      const raw = this.pressure.get(body) ?? 0
-      // 穿透總量歸一化（單層靜置的基線穿透不算痛，被高塔壓住才痛）；取與閒置值較大者
-      const physical = Math.min(1, Math.max(0, (raw - 0.3) / 3))
+      // 被 2 顆以內貼著還算自在；3 顆起開始不適，被 5 顆包圍就很痛苦
+      const neighbors = this.contacts.get(body)?.size ?? 0
+      const physical = Math.min(1, Math.max(0, (neighbors - 2) / 3))
       const target = Math.max(physical, idle)
-      // 痛感慢升（需持續受壓）、解除後慢恢復
+      // 痛感慢升（需持續受擠）、解除後慢恢復
       const rate = target > m.squeeze ? 1.4 : 2.2
       m.squeeze += (target - m.squeeze) * Math.min(1, rate * dt)
     }
