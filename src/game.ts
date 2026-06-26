@@ -21,8 +21,10 @@ interface PlanetMeta {
   bornAt: number
   /** 是否由合併誕生（觸發開心臉與火花，普通掉落則否） */
   merged: boolean
-  /** 擠壓痛苦程度 0~1，平滑累積/衰減（被壓久才痛、解除慢慢恢復） */
+  /** 被擠壓痛苦程度 0~1，平滑累積/衰減（被壓久才痛、解除慢慢恢復） */
   squeeze: number
+  /** 被 ≥4 顆鄰居包圍的持續秒數（要撐約 2 秒才轉成痛，瞬間擠不算） */
+  crushTime: number
 }
 
 export type GameState = 'ready' | 'playing' | 'over'
@@ -78,8 +80,10 @@ export class Game {
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
   /** 本物理步各星球貼到的鄰居星球集合（被越多顆包圍＝被擠越緊），每步重置 */
   private contacts = new Map<Matter.Body, Set<Matter.Body>>()
-  /** 自上次投放後玩家「懸停未投」的秒數（閒置擠壓用） */
+  /** 自上次投放後玩家「懸停未投」的秒數（閒置不耐煩用） */
   private waitTime = 0
+  /** 全場一致的「焦躁等待」程度 0~1（閒置太久 → 不耐煩臉），平滑處理 */
+  private idleMood = 0
 
   private cb: GameCallbacks
   private rng: () => number
@@ -136,7 +140,7 @@ export class Game {
       frictionAir: 0.008,
       density: 0.0012,
     })
-    this.meta.set(body, { tier, bornAt: this.time, merged, squeeze: 0 })
+    this.meta.set(body, { tier, bornAt: this.time, merged, squeeze: 0, crushTime: 0 })
     Composite.add(this.engine.world, body)
     return body
   }
@@ -216,6 +220,7 @@ export class Game {
     this.dropCooldown = 0
     this.accumulator = 0
     this.waitTime = 0
+    this.idleMood = 0
     this.contacts.clear()
     this.reviveUsed = false
     this.state = 'ready'
@@ -265,17 +270,21 @@ export class Game {
     set.add(b)
   }
 
-  /** 把鄰居擠壓 + 閒置等待折算成各星球平滑的擠壓痛苦值 */
+  /** 更新兩種獨立情緒：被擠壓（per-body 痛苦）與焦躁等待（全場一致的不耐煩） */
   private updateSqueeze(dt: number) {
-    // 閒置 5 秒後開始，再 4 秒爬到 0.7（不到滿，被擠爆才最痛）
-    const idle = Math.min(0.7, Math.max(0, (this.waitTime - 5) / 4))
+    // 焦躁等待：玩家懸停未投，閒置 5 秒後開始、再 4 秒爬滿（全場共用）
+    const idleTarget = Math.min(1, Math.max(0, (this.waitTime - 5) / 4))
+    this.idleMood += (idleTarget - this.idleMood) * Math.min(1, (idleTarget > this.idleMood ? 1.4 : 2.6) * dt)
+
     for (const body of Composite.allBodies(this.engine.world)) {
       const m = this.meta.get(body)
       if (!m) continue
-      // 被 2 顆以內貼著還算自在；3 顆起開始不適，被 5 顆包圍就很痛苦
+      // 被擠壓：要被 ≥4 顆鄰居包圍「持續約 2 秒」才轉成痛（瞬間擠或單純堆疊不算）
       const neighbors = this.contacts.get(body)?.size ?? 0
-      const physical = Math.min(1, Math.max(0, (neighbors - 2) / 3))
-      const target = Math.max(physical, idle)
+      m.crushTime = neighbors >= 4 ? m.crushTime + dt : Math.max(0, m.crushTime - dt * 2)
+      const dwell = Math.min(1, m.crushTime / 2) // 撐滿 2 秒才到全強度
+      const mag = Math.min(1, Math.max(0, (neighbors - 3) / 3)) // 4 顆起痛、6 顆滿
+      const target = mag * dwell
       // 痛感慢升（需持續受擠）、解除後慢恢復
       const rate = target > m.squeeze ? 1.4 : 2.2
       m.squeeze += (target - m.squeeze) * Math.min(1, rate * dt)
@@ -401,7 +410,7 @@ export class Game {
         this.state === 'over' || age <= 1
           ? 0
           : Math.min(1, Math.max(0, (BOARD.loseY + 40 - topY) / 50))
-      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, m.squeeze)
+      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, m.squeeze, this.idleMood)
     }
 
     this.particles.draw(g)

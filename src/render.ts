@@ -422,8 +422,10 @@ export function drawPlanet(
   age = 999,
   /** 危機程度 0~1：越接近頂線越緊張（冒汗、笑容轉擔心），預設 0 */
   danger = 0,
-  /** 擠壓程度 0~1：被堆疊壓住或閒置過久時瞇眼咬牙的痛苦臉，預設 0 */
+  /** 擠壓程度 0~1：被一堆星球包圍時瞇眼咬牙的痛苦臉，預設 0 */
   squeeze = 0,
+  /** 焦躁等待 0~1：玩家久未投放時的不耐煩臉（半垂眼、往上瞟、直線嘴），預設 0 */
+  bored = 0,
 ) {
   const r = tier.radius * scale
   const seed = tier.tier * 3.7 + 1
@@ -521,27 +523,66 @@ export function drawPlanet(
   const eyeY = -r * 0.12
   const eyeDX = r * 0.32 * vEyeDX
   const blink = Math.sin(time * 0.7 + blinkPhase) > 0.97 ? 0.15 : 1
-  // 情緒解算：喜悅（短暫）壓過負面；擠壓痛苦優先於危機緊張
+  // 情緒解算（高優先壓低優先）：喜悅 > 被擠痛苦 > 危機緊張 > 焦躁不耐煩
   const pain = squeeze * (1 - joy)
   const worry = danger * (1 - joy) * (1 - pain)
+  const tired = bored * (1 - joy) * (1 - pain) * (1 - worry) // 不耐煩，最低優先
   const stress = Math.max(pain, worry)
 
-  // 眼睛：開心瞪大、痛苦瞇起
+  // ── 眼睛 ──
   const eyeScale = vEyeSize * (1 + 0.25 * joy)
   const squint = 1 - 0.6 * pain
+  const shut = Math.min(1, Math.max(0, (pain - 0.45) / 0.25)) // 痛到 0.45→0.7 漸變成「><」緊閉
+  const lookUp = tired * r * 0.05 // 不耐煩時往上瞟
+  const droop = 1 - 0.45 * tired // 不耐煩時上眼瞼壓低（半垂 → 變扁）
   g.fillStyle = INK
+  g.strokeStyle = INK
   for (const dir of [-1, 1]) {
-    g.beginPath()
-    g.ellipse(dir * eyeDX, eyeY, r * 0.09 * eyeScale, r * 0.13 * eyeScale * blink * squint, 0, 0, Math.PI * 2)
-    g.fill()
+    const ex = dir * eyeDX
+    if (shut < 0.99) {
+      // 一般 / 瞇 / 半垂的橢圓眼
+      g.globalAlpha = 1 - shut
+      g.beginPath()
+      g.ellipse(ex, eyeY - lookUp, r * 0.09 * eyeScale, r * 0.13 * eyeScale * blink * squint * droop, 0, 0, Math.PI * 2)
+      g.fill()
+      g.globalAlpha = 1
+    }
+    if (shut > 0.01) {
+      // 被擠到緊閉用力的「∧」眼
+      g.globalAlpha = shut
+      g.lineWidth = Math.max(1.4, r * 0.05)
+      g.lineCap = 'round'
+      g.lineJoin = 'round'
+      g.beginPath()
+      g.moveTo(ex - r * 0.1, eyeY + r * 0.04)
+      g.lineTo(ex, eyeY - r * 0.06)
+      g.lineTo(ex + r * 0.1, eyeY + r * 0.04)
+      g.stroke()
+      g.globalAlpha = 1
+    }
   }
-  if (blink === 1 && pain < 0.5) {
+  // 眼神高光：平常/開心才有（痛苦緊閉、很睏半垂時不畫）
+  if (blink === 1 && pain < 0.5 && tired < 0.5 && shut < 0.5) {
     g.fillStyle = '#FFF9EC'
     for (const dir of [-1, 1]) {
       g.beginPath()
-      g.arc(dir * eyeDX - r * 0.03, eyeY - r * 0.05, r * 0.032 * eyeScale, 0, Math.PI * 2)
+      g.arc(dir * eyeDX - r * 0.03, eyeY - r * 0.05 - lookUp, r * 0.032 * eyeScale, 0, Math.PI * 2)
       g.fill()
     }
+  }
+  // 不耐煩的半垂上眼瞼：壓在眼睛上緣的一道線
+  if (tired > 0.2 && shut < 0.5) {
+    g.strokeStyle = INK
+    g.globalAlpha = Math.min(1, (tired - 0.2) / 0.5)
+    g.lineWidth = Math.max(1.3, r * 0.05)
+    g.lineCap = 'round'
+    for (const dir of [-1, 1]) {
+      g.beginPath()
+      g.moveTo(dir * eyeDX - r * 0.11, eyeY - r * 0.05 - lookUp)
+      g.lineTo(dir * eyeDX + r * 0.11, eyeY - r * 0.06 - lookUp)
+      g.stroke()
+    }
+    g.globalAlpha = 1
   }
   // 痛苦時眉頭：兩道下壓的斜線
   if (pain > 0.25) {
@@ -558,17 +599,18 @@ export function drawPlanet(
     g.globalAlpha = 1
   }
 
-  // 嘴：依情緒挑一種——平常/大笑的弧、痛苦咬牙的鋸齒、危機的小張嘴
+  // ── 嘴 ── 只畫一種：笑容在負面情緒升到 0.12 前就完全淡出，負面嘴才接手
+  // （單一 if/else 鏈，避免笑弧與痛苦嘴同時出現「邊痛邊笑」）
+  const neg = Math.max(pain, worry, tired)
+  const smileAlpha = joy > 0.01 ? 1 : Math.max(0, 1 - neg / 0.12)
   g.strokeStyle = INK
   g.lineWidth = Math.max(1.5, r * 0.045)
   g.lineCap = 'round'
   g.lineJoin = 'round'
-  // 笑容在痛苦/擔心升到 0.25 前就完全淡出（與眉頭/咬牙同步），避免「邊痛邊笑」
-  const smileAlpha = Math.max(0, 1 - (pain + worry) * 4)
-  if (joy > 0.01 || smileAlpha > 0.01) {
+  if (smileAlpha > 0.01) {
     const mouthR = r * (0.22 + 0.14 * joy) * vMouth
     const mouthSpread = 0.15 - 0.05 * joy
-    g.globalAlpha = joy > 0.01 ? 1 : smileAlpha
+    g.globalAlpha = smileAlpha
     g.beginPath()
     g.arc(0, r * 0.12, mouthR, Math.PI * mouthSpread, Math.PI * (1 - mouthSpread))
     if (joy > 0.35) {
@@ -577,8 +619,7 @@ export function drawPlanet(
     }
     g.stroke()
     g.globalAlpha = 1
-  }
-  if (pain > 0.01) {
+  } else if (pain >= worry && pain >= tired) {
     // 咬牙：上排鋸齒
     g.globalAlpha = Math.min(1, pain * 1.6)
     g.beginPath()
@@ -592,11 +633,19 @@ export function drawPlanet(
     }
     g.stroke()
     g.globalAlpha = 1
-  } else if (worry > 0.01) {
+  } else if (worry >= tired) {
     // 擔心的小張嘴
     g.globalAlpha = Math.min(1, worry * 1.6)
     g.beginPath()
     g.ellipse(0, r * 0.2, r * 0.09, r * 0.11, 0, 0, Math.PI * 2)
+    g.stroke()
+    g.globalAlpha = 1
+  } else {
+    // 不耐煩：一條略微下撇的直線嘴（—_—）
+    g.globalAlpha = Math.min(1, tired * 1.6)
+    g.beginPath()
+    g.moveTo(-r * 0.15, r * 0.19)
+    g.quadraticCurveTo(0, r * 0.22, r * 0.15, r * 0.19)
     g.stroke()
     g.globalAlpha = 1
   }
