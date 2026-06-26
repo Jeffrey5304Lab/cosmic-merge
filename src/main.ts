@@ -133,10 +133,14 @@ function showCombo(multiplier: number) {
   comboTimer = window.setTimeout(() => comboEl.classList.remove('show'), 1200)
 }
 
+/** 分數加千分位（2334 → 2,334），讓大數字好讀 */
+const fmt = (n: number) => n.toLocaleString('en-US')
+
 /* ── 分數跳動 ── */
 function popValue(el: HTMLElement, value: number) {
-  if (el.textContent !== String(value)) {
-    el.textContent = String(value)
+  const text = fmt(value)
+  if (el.textContent !== text) {
+    el.textContent = text
     el.classList.remove('pop')
     void el.offsetWidth
     el.classList.add('pop')
@@ -177,7 +181,7 @@ function renderLeaderboard() {
     left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
-    right.textContent = String(e.score)
+    right.textContent = fmt(e.score)
     li.append(left, right)
     list.appendChild(li)
   })
@@ -213,7 +217,7 @@ async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
     left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name}`
     const right = document.createElement('span')
     right.className = 'b-score'
-    right.textContent = String(e.score)
+    right.textContent = fmt(e.score)
     li.append(left, right)
     list.appendChild(li)
   })
@@ -273,7 +277,7 @@ function todayKey(): string {
 const game = new Game({
   onScore(score, best, maxTier) {
     popValue(scoreEl, score)
-    bestEl.textContent = String(best)
+    bestEl.textContent = fmt(best)
     if (maxTier !== bestMergeTier) renderBestMerge(maxTier)
   },
   onNext: renderNext,
@@ -584,7 +588,7 @@ function fillBoard(
     left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
-    right.textContent = String(e.score)
+    right.textContent = fmt(e.score)
     li.append(left, right)
     list.appendChild(li)
   })
