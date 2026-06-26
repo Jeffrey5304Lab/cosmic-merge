@@ -416,6 +416,12 @@ export function drawPlanet(
   angle: number,
   scale = 1,
   time = 0,
+  /** 每顆星球唯一種子，讓同階星球的臉略有不同（眨眼/眼距/嘴弧/腮紅） */
+  faceSeed = tier.tier + 1,
+  /** 誕生後經過秒數；< 0.6 秒時綻放「剛合併」的開心臉，預設 999 = 平常臉 */
+  age = 999,
+  /** 危機程度 0~1：越接近頂線越緊張（冒汗、笑容轉擔心），預設 0 */
+  danger = 0,
 ) {
   const r = tier.radius * scale
   const seed = tier.tier * 3.7 + 1
@@ -495,39 +501,114 @@ export function drawPlanet(
     g.restore()
   }
 
-  // 墨水表情
+  // 墨水表情：用 faceSeed 做穩定的個體微調，誕生瞬間綻放開心臉
+  const rnd = (k: number) => {
+    const s = Math.sin(faceSeed * 1.13 + k * 7.31) * 43758.5453
+    return s - Math.floor(s)
+  }
+  // 合併/誕生喜悅：誕生 0.6 秒內由 1 平滑（smoothstep）衰減到 0
+  const jt = Math.min(1, Math.max(0, 1 - age / 0.6))
+  const joy = jt * jt * (3 - 2 * jt)
+
+  const vEyeSize = 1 + (rnd(1) - 0.5) * 0.3 // ±15% 眼睛大小
+  const vEyeDX = 1 + (rnd(2) - 0.5) * 0.2 // ±10% 眼距
+  const vMouth = 1 + (rnd(3) - 0.5) * 0.4 // ±20% 嘴弧
+  const vBlushX = 1 + (rnd(4) - 0.5) * 0.3 // ±15% 腮紅位置
+  const blinkPhase = rnd(5) * Math.PI * 2 // 眨眼相位錯開，不再整排同步
+
   const eyeY = -r * 0.12
-  const eyeDX = r * 0.32
-  const blink = Math.sin(time * 0.7 + tier.tier * 1.3) > 0.97 ? 0.15 : 1
+  const eyeDX = r * 0.32 * vEyeDX
+  const blink = Math.sin(time * 0.7 + blinkPhase) > 0.97 ? 0.15 : 1
+  const eyeScale = vEyeSize * (1 + 0.25 * joy) // 開心時瞪大眼
   g.fillStyle = INK
   for (const dir of [-1, 1]) {
     g.beginPath()
-    g.ellipse(dir * eyeDX, eyeY, r * 0.09, r * 0.13 * blink, 0, 0, Math.PI * 2)
+    g.ellipse(dir * eyeDX, eyeY, r * 0.09 * eyeScale, r * 0.13 * eyeScale * blink, 0, 0, Math.PI * 2)
     g.fill()
   }
   if (blink === 1) {
     g.fillStyle = '#FFF9EC'
     for (const dir of [-1, 1]) {
       g.beginPath()
-      g.arc(dir * eyeDX - r * 0.03, eyeY - r * 0.05, r * 0.032, 0, Math.PI * 2)
+      g.arc(dir * eyeDX - r * 0.03, eyeY - r * 0.05, r * 0.032 * eyeScale, 0, Math.PI * 2)
       g.fill()
     }
   }
+  // 嘴：開心時放大成大笑；危機時笑容淡出、換上擔心的小嘴
   g.strokeStyle = INK
   g.lineWidth = Math.max(1.5, r * 0.045)
   g.lineCap = 'round'
-  g.beginPath()
-  g.arc(0, r * 0.12, r * 0.22, Math.PI * 0.15, Math.PI * 0.85)
-  g.stroke()
-  // 腮紅
-  g.globalAlpha = 0.5
+  const smileAlpha = 1 - danger
+  if (smileAlpha > 0.01) {
+    const mouthR = r * (0.22 + 0.14 * joy) * vMouth
+    const mouthSpread = 0.15 - 0.05 * joy
+    g.globalAlpha = smileAlpha
+    g.beginPath()
+    g.arc(0, r * 0.12, mouthR, Math.PI * mouthSpread, Math.PI * (1 - mouthSpread))
+    if (joy > 0.35) {
+      g.fillStyle = `rgba(60,42,42,${(0.5 * joy).toFixed(3)})`
+      g.fill()
+    }
+    g.stroke()
+    g.globalAlpha = 1
+  }
+  if (danger > 0.01) {
+    // 擔心的小張嘴
+    g.globalAlpha = danger
+    g.beginPath()
+    g.ellipse(0, r * 0.2, r * 0.09, r * 0.11, 0, 0, Math.PI * 2)
+    g.stroke()
+    g.globalAlpha = 1
+  }
+  // 腮紅（開心時更紅）
+  g.globalAlpha = 0.5 + 0.3 * joy
   g.fillStyle = '#E2867A'
   for (const dir of [-1, 1]) {
     g.beginPath()
-    g.ellipse(dir * r * 0.52, r * 0.12, r * 0.12, r * 0.07, 0, 0, Math.PI * 2)
+    g.ellipse(dir * r * 0.52 * vBlushX, r * 0.12, r * 0.12, r * 0.07, 0, 0, Math.PI * 2)
     g.fill()
   }
   g.globalAlpha = 1
+
+  // 緊張汗滴：危機時於額角滑落
+  if (danger > 0.2) {
+    const drift = ((time * 0.9) % 1) * r * 0.18
+    const dx = eyeDX * 1.25
+    const dy = -r * 0.34 + drift
+    g.globalAlpha = danger
+    g.fillStyle = '#8FC7E8'
+    g.beginPath()
+    g.moveTo(dx, dy - r * 0.13)
+    g.quadraticCurveTo(dx + r * 0.085, dy, dx, dy + r * 0.07)
+    g.quadraticCurveTo(dx - r * 0.085, dy, dx, dy - r * 0.13)
+    g.fill()
+    g.globalAlpha = 1
+  }
+
+  // 誕生火花：合併瞬間四周冒出小四角星，隨 joy 淡出
+  if (joy > 0.01) {
+    g.fillStyle = '#FFF1B8'
+    g.globalAlpha = joy
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 + time * 1.5
+      const sr = r * (1.05 + 0.3 * (1 - joy)) // 由內向外擴散
+      const sx = Math.cos(a) * sr
+      const sy = Math.sin(a) * sr - r * 0.1
+      const ss = r * 0.07 * joy
+      g.beginPath()
+      g.moveTo(sx, sy - ss * 2)
+      g.lineTo(sx + ss * 0.5, sy - ss * 0.5)
+      g.lineTo(sx + ss * 2, sy)
+      g.lineTo(sx + ss * 0.5, sy + ss * 0.5)
+      g.lineTo(sx, sy + ss * 2)
+      g.lineTo(sx - ss * 0.5, sy + ss * 0.5)
+      g.lineTo(sx - ss * 2, sy)
+      g.lineTo(sx - ss * 0.5, sy - ss * 0.5)
+      g.closePath()
+      g.fill()
+    }
+    g.globalAlpha = 1
+  }
 
   g.restore()
 }

@@ -19,6 +19,8 @@ interface PlanetMeta {
   tier: number
   /** 出生時間（秒），用於彈跳出生動畫與寬限期 */
   bornAt: number
+  /** 是否由合併誕生（觸發開心臉與火花，普通掉落則否） */
+  merged: boolean
 }
 
 export type GameState = 'ready' | 'playing' | 'over'
@@ -110,7 +112,7 @@ export class Game {
     ])
   }
 
-  private spawnPlanet(tier: number, x: number, y: number): Matter.Body {
+  private spawnPlanet(tier: number, x: number, y: number, merged = false): Matter.Body {
     const r = TIERS[tier].radius
     const body = Bodies.circle(x, y, r, {
       restitution: 0.25,
@@ -118,7 +120,7 @@ export class Game {
       frictionAir: 0.008,
       density: 0.0012,
     })
-    this.meta.set(body, { tier, bornAt: this.time })
+    this.meta.set(body, { tier, bornAt: this.time, merged })
     Composite.add(this.engine.world, body)
     return body
   }
@@ -245,7 +247,7 @@ export class Game {
       const my = (a.position.y + b.position.y) / 2
       Composite.remove(this.engine.world, a)
       Composite.remove(this.engine.world, b)
-      const child = this.spawnPlanet(result, mx, my)
+      const child = this.spawnPlanet(result, mx, my, true)
       Body.setVelocity(child, { x: 0, y: -1.5 })
 
       const multiplier = this.combo.hit(this.time * 1000)
@@ -343,7 +345,13 @@ export class Game {
       // 出生彈跳：0.25 秒內從 0.4 彈到 1
       const age = this.time - m.bornAt
       const scale = age < 0.25 ? 0.4 + 0.6 * easeOutBack(age / 0.25) : 1
-      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time)
+      // 危機臉：已落定的星球越接近頂線越緊張（出生 1 秒寬限內不算）
+      const topY = body.position.y - TIERS[m.tier].radius * 0.5
+      const danger =
+        this.state === 'over' || age <= 1
+          ? 0
+          : Math.min(1, Math.max(0, (BOARD.loseY + 40 - topY) / 50))
+      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger)
     }
 
     this.particles.draw(g)

@@ -448,12 +448,74 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   })
 }
 
+/* ── 排行榜 modal（遊戲中可查看；開啟時暫停物理，畫面凍結） ── */
+const leaderboardModal = $<HTMLDivElement>('leaderboard-modal')
+const lbTitleEl = $<HTMLSpanElement>('lb-title')
+const lbListEl = $<HTMLOListElement>('lb-list')
+const leaderboardBtn = $<HTMLButtonElement>('leaderboard-btn')
+let paused = false
+let lbRequestId = 0
+
+function fillBoard(list: HTMLOListElement, entries: { name?: string; score: number; maxTier: number }[]) {
+  list.innerHTML = ''
+  if (entries.length === 0) {
+    const li = document.createElement('li')
+    li.className = 'b-empty'
+    li.textContent = STR.noScores
+    list.appendChild(li)
+    return
+  }
+  entries.forEach((e, i) => {
+    const li = document.createElement('li')
+    const left = document.createElement('span')
+    left.textContent = `${i + 1}. ${e.name || planetName(e.maxTier)}`
+    const right = document.createElement('span')
+    right.className = 'b-score'
+    right.textContent = String(e.score)
+    li.append(left, right)
+    list.appendChild(li)
+  })
+}
+
+async function renderModalLeaderboard() {
+  if (REMOTE_ENABLED) {
+    lbTitleEl.textContent = STR.globalLeaderboard
+    const reqId = ++lbRequestId
+    lbListEl.innerHTML = '<li class="b-empty">…</li>'
+    const entries = await fetchTopScores(10)
+    if (reqId !== lbRequestId) return // 舊請求慢回：放棄，避免覆蓋新榜
+    fillBoard(lbListEl, entries)
+  } else {
+    lbTitleEl.textContent = STR.leaderboard
+    fillBoard(lbListEl, loadLeaderboard().slice(0, 10))
+  }
+}
+
+function openLeaderboard() {
+  paused = true
+  leaderboardModal.classList.remove('hidden')
+  void renderModalLeaderboard()
+}
+function closeLeaderboard() {
+  paused = false
+  leaderboardModal.classList.add('hidden')
+}
+
+leaderboardBtn.addEventListener('click', () => {
+  leaderboardBtn.blur()
+  openLeaderboard()
+})
+$<HTMLButtonElement>('lb-close').addEventListener('click', closeLeaderboard)
+leaderboardModal.addEventListener('click', (e) => {
+  if (e.target === leaderboardModal) closeLeaderboard() // 點背景關閉
+})
+
 /* ── 主迴圈 ── */
 let last = performance.now()
 function frame(now: number) {
   const dt = Math.min((now - last) / 1000, 0.1) // 切到背景分頁回來時避免大步進
   last = now
-  game.update(dt)
+  if (!paused) game.update(dt)
   ctx!.clearRect(0, 0, BOARD.width, BOARD.height)
   game.draw(ctx!)
   requestAnimationFrame(frame)

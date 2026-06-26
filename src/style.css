@@ -484,6 +484,11 @@ body {
   stroke-linejoin: round;
 }
 
+.btn-icon .icon-emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+
 #mute .icon-sound-off,
 #mute.muted .icon-sound-on {
   display: none;

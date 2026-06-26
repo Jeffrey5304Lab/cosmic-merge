@@ -50,6 +50,17 @@
           <div id="combo" class="combo" aria-live="polite"></div>
           <div id="tutorial" class="tutorial hidden"><p id="tutorial-text"></p></div>
           <div id="hint" class="tutorial hidden"><p id="hint-text"></p></div>
+          <div id="leaderboard-modal" class="overlay hidden">
+            <div class="overlay-card">
+              <span id="lb-title" class="hud-label">GLOBAL TOP SCORES</span>
+              <div class="board">
+                <ol id="lb-list"></ol>
+              </div>
+              <div class="overlay-actions">
+                <button id="lb-close" class="btn">Close</button>
+              </div>
+            </div>
+          </div>
           <div id="gameover" class="overlay hidden">
             <div class="overlay-card">
               <p class="overlay-emoji" id="over-emoji">💫</p>
@@ -81,6 +92,9 @@
               <path d="M11.6 9.8 C11.5 13 11.6 16.4 11.9 19.6 C11.9 20.1 12.5 20.1 12.5 19.6 C12.7 16.4 12.6 13 12.4 9.8" fill="var(--honey)" />
             </svg>
             <span id="hammer-count" class="count">1</span>
+          </button>
+          <button id="leaderboard-btn" class="btn btn-ghost btn-icon" aria-label="Leaderboard">
+            <span class="icon-emoji" aria-hidden="true">🏆</span>
           </button>
           <button id="mute" class="btn btn-ghost btn-icon" aria-label="Toggle sound">
             <svg class="icon-sound-on" viewBox="0 0 24 24" aria-hidden="true">
