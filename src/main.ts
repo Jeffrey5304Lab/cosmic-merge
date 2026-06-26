@@ -489,6 +489,12 @@ window.addEventListener('keydown', e => {
   // 焦點在輸入欄/選單時把鍵盤讓給表單：名字才能打空白、方向鍵才能選國家
   const t = e.target as HTMLElement | null
   if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return
+  // 排行榜開著時 Esc 關閉（在暫停守門之前處理，否則被擋掉）
+  if (e.key === 'Escape' && paused) {
+    closeLeaderboard()
+    e.preventDefault()
+    return
+  }
   // 排行榜開著（物理已暫停）時不接受瞄準／投放，免得在凍結畫面後面偷偷掉球
   if (paused) return
   if (e.key === 'ArrowLeft') {
