@@ -21,6 +21,8 @@ interface PlanetMeta {
   bornAt: number
   /** 是否由合併誕生（觸發開心臉與火花，普通掉落則否） */
   merged: boolean
+  /** 擠壓痛苦程度 0~1，平滑累積/衰減（被壓久才痛、解除慢慢恢復） */
+  squeeze: number
 }
 
 export type GameState = 'ready' | 'playing' | 'over'
@@ -74,6 +76,10 @@ export class Game {
   private dangerTime = 0
   private shake = 0
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
+  /** 本物理步各星球累計的接觸穿透量（被壓越深越大），每步重置 */
+  private pressure = new Map<Matter.Body, number>()
+  /** 自上次投放後玩家「懸停未投」的秒數（閒置擠壓用） */
+  private waitTime = 0
 
   private cb: GameCallbacks
   private rng: () => number
@@ -98,6 +104,19 @@ export class Game {
     }
     Events.on(this.engine, 'collisionStart', queueMergeable)
     Events.on(this.engine, 'collisionActive', queueMergeable)
+    // 持續接觸時累計每顆星球的穿透深度 → 推斷被擠壓的程度
+    Events.on(this.engine, 'collisionActive', (e: Matter.IEventCollision<Matter.Engine>) => {
+      for (const pair of e.pairs) {
+        const depth = pair.collision?.depth ?? 0
+        if (depth <= 0) continue
+        if (this.meta.has(pair.bodyA)) {
+          this.pressure.set(pair.bodyA, (this.pressure.get(pair.bodyA) ?? 0) + depth)
+        }
+        if (this.meta.has(pair.bodyB)) {
+          this.pressure.set(pair.bodyB, (this.pressure.get(pair.bodyB) ?? 0) + depth)
+        }
+      }
+    })
     this.cb.onNext(this.nextDropTier)
     this.cb.onScore(this.score, this.best, this.maxTierReached)
   }
@@ -120,7 +139,7 @@ export class Game {
       frictionAir: 0.008,
       density: 0.0012,
     })
-    this.meta.set(body, { tier, bornAt: this.time, merged })
+    this.meta.set(body, { tier, bornAt: this.time, merged, squeeze: 0 })
     Composite.add(this.engine.world, body)
     return body
   }
@@ -186,6 +205,7 @@ export class Game {
     this.aim(this.aimX) // 依新星球半徑重新夾住範圍
     this.cb.onNext(this.nextDropTier)
     this.dropCooldown = 0.45
+    this.waitTime = 0
   }
 
   /** 重新開始 */
@@ -198,6 +218,8 @@ export class Game {
     this.dangerTime = 0
     this.dropCooldown = 0
     this.accumulator = 0
+    this.waitTime = 0
+    this.pressure.clear()
     this.reviveUsed = false
     this.state = 'ready'
     this.currentTier = pickDropTier(this.rng)
@@ -218,6 +240,7 @@ export class Game {
       const step = 1 / 60
       this.accumulator += dt
       let steps = 0
+      this.pressure.clear() // 重置後由 collisionActive 重新累計本步的接觸壓力
       while (this.accumulator >= step && steps < 5) {
         Engine.update(this.engine, step * 1000)
         this.accumulator -= step
@@ -227,9 +250,29 @@ export class Game {
       if (this.accumulator > step) this.accumulator = 0
       this.processMerges()
       this.checkGameOver(dt)
+      // 閒置擠壓：玩家懸停未投超過 5 秒，場上星球漸感不適
+      if (this.state === 'playing' && this.dropCooldown === 0) this.waitTime += dt
+      this.updateSqueeze(dt)
     }
     this.particles.update(dt)
     this.meteors.update(dt, this.time)
+  }
+
+  /** 把本步的接觸壓力 + 閒置等待折算成各星球平滑的擠壓痛苦值 */
+  private updateSqueeze(dt: number) {
+    // 閒置 5 秒後開始，再 4 秒爬到 0.7（不到滿，物理壓爆才最痛）
+    const idle = Math.min(0.7, Math.max(0, (this.waitTime - 5) / 4))
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (!m) continue
+      const raw = this.pressure.get(body) ?? 0
+      // 穿透總量歸一化（單層靜置的基線穿透不算痛，被高塔壓住才痛）；取與閒置值較大者
+      const physical = Math.min(1, Math.max(0, (raw - 0.3) / 3))
+      const target = Math.max(physical, idle)
+      // 痛感慢升（需持續受壓）、解除後慢恢復
+      const rate = target > m.squeeze ? 1.4 : 2.2
+      m.squeeze += (target - m.squeeze) * Math.min(1, rate * dt)
+    }
   }
 
   private processMerges() {
@@ -351,7 +394,7 @@ export class Game {
         this.state === 'over' || age <= 1
           ? 0
           : Math.min(1, Math.max(0, (BOARD.loseY + 40 - topY) / 50))
-      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger)
+      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, m.squeeze)
     }
 
     this.particles.draw(g)
