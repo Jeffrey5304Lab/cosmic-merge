@@ -384,6 +384,22 @@ body {
   color: var(--text-dim);
 }
 
+.country-select {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 7px 16px;
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+  max-width: 220px;
+  align-self: center;
+}
+
 .name-input:focus {
   border-color: var(--accent);
 }

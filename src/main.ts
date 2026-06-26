@@ -6,6 +6,7 @@ import { isMuted, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
+import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
 import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
@@ -51,6 +52,38 @@ nameInput.addEventListener('input', () => {
 
 function getPlayerName(): string {
   return nameInput.value.trim().slice(0, 16)
+}
+
+/* ── 玩家國家（記住在 localStorage，預設用瀏覽器語系猜） ── */
+const COUNTRY_KEY = 'cosmic-merge:country'
+const countrySelect = $<HTMLSelectElement>('country-select')
+{
+  const blank = document.createElement('option')
+  blank.value = ''
+  blank.textContent = '🏳️ —'
+  countrySelect.appendChild(blank)
+  const sorted = COUNTRY_CODES.map(code => ({ code, name: countryName(code) })).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )
+  for (const { code, name } of sorted) {
+    const opt = document.createElement('option')
+    opt.value = code
+    opt.textContent = `${flagEmoji(code)} ${name}`
+    countrySelect.appendChild(opt)
+  }
+  const saved = localStorage.getItem(COUNTRY_KEY)
+  countrySelect.value = saved ?? guessCountry()
+  countrySelect.addEventListener('change', () => {
+    try {
+      localStorage.setItem(COUNTRY_KEY, countrySelect.value)
+    } catch {
+      /* 私密模式忽略 */
+    }
+  })
+}
+
+function getCountry(): string {
+  return countrySelect.value
 }
 
 const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -119,6 +152,12 @@ function medal(i: number): string {
   return i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
 }
 
+/** 國旗前綴（含尾隨空格）；無國家時回空字串 */
+function flagPrefix(country?: string): string {
+  const f = flagEmoji(country)
+  return f ? `${f} ` : ''
+}
+
 function renderLeaderboard() {
   $('board-title').textContent = STR.leaderboard
   const list = $<HTMLOListElement>('board-list')
@@ -135,7 +174,7 @@ function renderLeaderboard() {
     const li = document.createElement('li')
     if (lastRank !== null && i === lastRank - 1) li.className = 'me'
     const left = document.createElement('span')
-    left.textContent = `${medal(i)} ${e.name || planetName(e.maxTier)}`
+    left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
@@ -171,7 +210,7 @@ async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
       li.className = 'me'
     }
     const left = document.createElement('span')
-    left.textContent = `${medal(i)} ${e.name}`
+    left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
@@ -241,7 +280,15 @@ const game = new Game({
   onCombo: showCombo,
   onGameOver(score, best, maxTier) {
     const name = getPlayerName()
-    lastEntry = { score, maxTier, date: todayKey(), name: name || undefined, id: crypto.randomUUID() }
+    const country = getCountry()
+    lastEntry = {
+      score,
+      maxTier,
+      date: todayKey(),
+      name: name || undefined,
+      country: country || undefined,
+      id: crypto.randomUUID(),
+    }
     lastRank = addScore(lastEntry)
     lastResult = { score, best, maxTier }
     const canRevive = !game.reviveUsed && score > 0
@@ -250,7 +297,12 @@ const game = new Game({
     overlayEl.classList.remove('hidden')
 
     if (REMOTE_ENABLED) {
-      const remoteEntry: RemoteScoreEntry = { name: name || 'Anonymous', score, maxTier }
+      const remoteEntry: RemoteScoreEntry = {
+        name: name || 'Anonymous',
+        score,
+        maxTier,
+        country: country || undefined,
+      }
       if (canRevive) {
         pendingRemoteEntry = remoteEntry
         void renderGlobalLeaderboard(null)
@@ -259,7 +311,7 @@ const game = new Game({
         const toSubmit = remoteEntry
         pendingRemoteEntry = null
         void (async () => {
-          await submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier)
+          await submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier, toSubmit.country)
           await Promise.all([renderGlobalLeaderboard(toSubmit), showGlobalRank(toSubmit.score)])
         })()
       }
@@ -344,7 +396,7 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   if (pendingRemoteEntry) {
     const toSubmit = pendingRemoteEntry
     pendingRemoteEntry = null
-    void submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier)
+    void submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier, toSubmit.country)
   }
   exitSmashMode()
   game.restart()
@@ -495,7 +547,10 @@ const leaderboardBtn = $<HTMLButtonElement>('leaderboard-btn')
 let paused = false
 let lbRequestId = 0
 
-function fillBoard(list: HTMLOListElement, entries: { name?: string; score: number; maxTier: number }[]) {
+function fillBoard(
+  list: HTMLOListElement,
+  entries: { name?: string; score: number; maxTier: number; country?: string }[],
+) {
   list.innerHTML = ''
   if (entries.length === 0) {
     const li = document.createElement('li')
@@ -509,7 +564,7 @@ function fillBoard(list: HTMLOListElement, entries: { name?: string; score: numb
     const li = document.createElement('li')
     if (me && e.name === me) li.className = 'me' // 高亮自己（同名都算）
     const left = document.createElement('span')
-    left.textContent = `${medal(i)} ${e.name || planetName(e.maxTier)}`
+    left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)

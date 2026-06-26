@@ -10,6 +10,8 @@ export interface LeaderboardEntry {
   name?: string
   /** Unique per-entry id (optional for backwards compat with old entries). */
   id?: string
+  /** ISO alpha-2 國碼（可選，舊資料沒有） */
+  country?: string
 }
 
 const KEY = 'cosmic-merge:leaderboard'

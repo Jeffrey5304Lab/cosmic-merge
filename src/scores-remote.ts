@@ -4,6 +4,8 @@ export interface RemoteScoreEntry {
   name: string
   score: number
   maxTier: number
+  /** ISO alpha-2 國碼；舊資料或尚未建欄位時為 undefined */
+  country?: string
 }
 
 function headers(): Record<string, string> {
@@ -15,14 +17,27 @@ function headers(): Record<string, string> {
 }
 
 /** Submit a score to the global leaderboard. Returns true on success. */
-export async function submitScore(name: string, score: number, maxTier: number): Promise<boolean> {
+export async function submitScore(
+  name: string,
+  score: number,
+  maxTier: number,
+  country?: string,
+): Promise<boolean> {
   if (!REMOTE_ENABLED) return false
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+  const base: Record<string, unknown> = { name, score, max_tier: maxTier }
+  const post = (body: Record<string, unknown>) =>
+    fetch(`${SUPABASE_URL}/rest/v1/scores`, {
       method: 'POST',
       headers: { ...headers(), Prefer: 'return=minimal' },
-      body: JSON.stringify({ name, score, max_tier: maxTier }),
+      body: JSON.stringify(body),
     })
+  try {
+    if (country) {
+      const res = await post({ ...base, country })
+      if (res.ok) return true
+      // country 欄位可能尚未建立 → 退回不帶 country 再送，分數照樣上榜
+    }
+    const res = await post(base)
     return res.ok
   } catch {
     return false
@@ -60,24 +75,30 @@ export async function fetchRank(score: number): Promise<{ rank: number; gap: num
 /** Fetch the top global scores, highest first. Returns [] on failure. */
 export async function fetchTopScores(limit = 10): Promise<RemoteScoreEntry[]> {
   if (!REMOTE_ENABLED) return []
+  const url = (select: string) =>
+    `${SUPABASE_URL}/rest/v1/scores?select=${select}&order=score.desc&limit=${limit}`
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/scores?select=name,score,max_tier&order=score.desc&limit=${limit}`,
-      { headers: headers() },
-    )
+    // 先試帶 country；欄位未建時 (400) 退回不帶，榜單照常顯示
+    let res = await fetch(url('name,score,max_tier,country'), { headers: headers() })
+    if (!res.ok) res = await fetch(url('name,score,max_tier'), { headers: headers() })
     if (!res.ok) return []
     const rows: unknown = await res.json()
     if (!Array.isArray(rows)) return []
     return rows
       .filter(
-        (r): r is { name: string; score: number; max_tier: number } =>
+        (r): r is { name: string; score: number; max_tier: number; country?: string } =>
           typeof r === 'object' &&
           r !== null &&
           typeof (r as Record<string, unknown>).name === 'string' &&
           typeof (r as Record<string, unknown>).score === 'number' &&
           typeof (r as Record<string, unknown>).max_tier === 'number',
       )
-      .map(r => ({ name: r.name, score: r.score, maxTier: r.max_tier }))
+      .map(r => ({
+        name: r.name,
+        score: r.score,
+        maxTier: r.max_tier,
+        country: typeof r.country === 'string' ? r.country : undefined,
+      }))
   } catch {
     return []
   }

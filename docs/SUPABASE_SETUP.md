@@ -33,6 +33,20 @@ create policy "anon can read" on scores for select to anon using (true);
 This creates the table and allows the public (anon) API key to insert new
 scores and read the leaderboard, without exposing any other tables/data.
 
+### Enabling country flags (optional)
+
+To show a country flag next to each name, add a `country` column. The game
+already sends/reads it and degrades gracefully until this runs — scores keep
+working without flags in the meantime, so this can be applied any time:
+
+```sql
+alter table scores add column if not exists country text;
+```
+
+Once added, new scores store the player's chosen country (ISO alpha-2 code)
+and the leaderboard shows the matching flag emoji. Existing rows stay
+flag-less (their `country` is null).
+
 ## 3. Copy your API credentials
 
 1. In the Supabase dashboard, go to **Settings → API**.
