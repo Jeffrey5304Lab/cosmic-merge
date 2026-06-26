@@ -306,6 +306,8 @@ const game = new Game({
       if (canRevive) {
         pendingRemoteEntry = remoteEntry
         void renderGlobalLeaderboard(null)
+        // 名次只是查詢（不寫入），復活前先讓玩家看到目前會排到第幾
+        void showGlobalRank(score)
       } else {
         // 用本次（復活後最終）成績送出，不是復活前暫存的舊分數
         const toSubmit = remoteEntry
