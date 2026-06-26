@@ -15,7 +15,8 @@ Drop cute planets into a storybook night sky and merge your way from Meteor to t
 - 🪐 **11 級進化鏈**：隕石 → 月球 → 水星 → 火星 → 金星 → 地球 → 海王星 → 天王星 → 土星 → 木星 → **太陽**
 - ✍️ **手繪紙感美術**：抖動墨水邊線、紙剪陰影、水彩星雲、紙張顆粒，全程 Canvas 自繪零素材
 - ⚡ **連鎖 COMBO**：1.5 秒內連續合成，倍率最高 ×8，配衝擊波 + 粒子 + 螢幕震動
-- 🏆 **排行榜**：結算畫面輸入暱稱送出分數，顯示前 10 名與本局名次；設定 Supabase 後變全球排行榜，未設定則自動退回本機排行榜
+- 😊 **會表情的星球**：每顆星球臉孔略有不同並各自眨眼；合併瞬間綻放笑容噴火花、接近頂線冒汗緊張、被一堆星球擠住或閒置過久則瞇眼咬牙喊痛
+- 🏆 **全球排行榜**：結算輸入暱稱與國家送出分數，顯示全球前 10、🥇🥈🥉 獎牌、你的名次與「再 N 分超越上一名」；遊戲中可隨時開排行榜（會暫停）並用 🌍 全球 / 🇹🇼 我的國家 分頁切換。已接 Supabase，未設定則自動退回本機排行榜
 - 📸 **成績分享卡**：一鍵生成手繪風成績圖，原生分享（手機）或下載（桌面）
 - 💫 **復活機制**：每局一次，看（模擬）廣告清掉上方星球續玩——獎勵式廣告位已就緒
 - 🔨 **道具**：小錘子敲掉任一顆星球（看廣告獲得）
@@ -61,7 +62,8 @@ node scripts/screenshot.mjs   # Playwright 截圖驗收（需全域 playwright�
 
 - [x] 部署上線（GitHub Pages）
 - [x] Service Worker 完整離線
-- [x] 線上排行榜（程式碼已完成；需依 [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) 設定憑證才會在正式站啟用，否則自動退回本機排行榜）
+- [x] 線上排行榜（已接 Supabase 並在正式站啟用；設定見 [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md)）
+- [x] 排行榜進階：獎牌、本局名次與差距、國家國旗 + 國家分頁（國旗需執行一次 `alter table scores add column country text;` 才會顯示，未建欄位時自動退回無國旗）
 - [ ] Capacitor 包裝 iOS / Android App
 - [ ] 星球皮膚主題（水果、甜點、貓咪）
 
