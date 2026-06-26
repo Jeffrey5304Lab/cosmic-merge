@@ -563,7 +563,8 @@ export function drawPlanet(
   g.lineWidth = Math.max(1.5, r * 0.045)
   g.lineCap = 'round'
   g.lineJoin = 'round'
-  const smileAlpha = Math.max(0, 1 - pain - worry)
+  // 笑容在痛苦/擔心升到 0.25 前就完全淡出（與眉頭/咬牙同步），避免「邊痛邊笑」
+  const smileAlpha = Math.max(0, 1 - (pain + worry) * 4)
   if (joy > 0.01 || smileAlpha > 0.01) {
     const mouthR = r * (0.22 + 0.14 * joy) * vMouth
     const mouthSpread = 0.15 - 0.05 * joy
@@ -579,7 +580,7 @@ export function drawPlanet(
   }
   if (pain > 0.01) {
     // 咬牙：上排鋸齒
-    g.globalAlpha = pain
+    g.globalAlpha = Math.min(1, pain * 1.6)
     g.beginPath()
     const mw = r * 0.26
     const my = r * 0.2
@@ -593,7 +594,7 @@ export function drawPlanet(
     g.globalAlpha = 1
   } else if (worry > 0.01) {
     // 擔心的小張嘴
-    g.globalAlpha = worry
+    g.globalAlpha = Math.min(1, worry * 1.6)
     g.beginPath()
     g.ellipse(0, r * 0.2, r * 0.09, r * 0.11, 0, 0, Math.PI * 2)
     g.stroke()
