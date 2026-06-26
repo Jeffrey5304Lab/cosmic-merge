@@ -351,6 +351,21 @@ body {
   font-size: 14px;
 }
 
+.overlay-rank {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(243, 203, 87, 0.22);
+  border-radius: 999px;
+  padding: 5px 14px;
+  align-self: center;
+}
+
+.overlay-rank.hidden {
+  display: none;
+}
+
 /* ── 玩家名稱輸入 ─────────────────── */
 .name-input {
   font-family: var(--font-ui);

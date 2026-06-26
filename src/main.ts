@@ -7,7 +7,7 @@ import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { REMOTE_ENABLED } from './config'
-import { fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
+import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
 import { addHammer, getHammers, useHammer } from './inventory'
 
@@ -32,6 +32,7 @@ const overlayEl = $<HTMLDivElement>('gameover')
 const overTitleEl = $<HTMLHeadingElement>('over-title')
 const overScoreEl = $<HTMLParagraphElement>('over-score')
 const overSubEl = $<HTMLParagraphElement>('over-sub')
+const overRankEl = $<HTMLParagraphElement>('over-rank')
 const overEmojiEl = $<HTMLParagraphElement>('over-emoji')
 const muteBtn = $<HTMLButtonElement>('mute')
 const nameInput = $<HTMLInputElement>('name-input')
@@ -113,6 +114,11 @@ function popValue(el: HTMLElement, value: number) {
 let lastResult: { score: number; best: number; maxTier: number } | null = null
 let lastRank: number | null = null
 
+/** 名次前綴：前三名給獎牌，其餘給數字 */
+function medal(i: number): string {
+  return i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
+}
+
 function renderLeaderboard() {
   $('board-title').textContent = STR.leaderboard
   const list = $<HTMLOListElement>('board-list')
@@ -129,7 +135,7 @@ function renderLeaderboard() {
     const li = document.createElement('li')
     if (lastRank !== null && i === lastRank - 1) li.className = 'me'
     const left = document.createElement('span')
-    left.textContent = `${i + 1}. ${e.name || planetName(e.maxTier)}`
+    left.textContent = `${medal(i)} ${e.name || planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
@@ -165,13 +171,41 @@ async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
       li.className = 'me'
     }
     const left = document.createElement('span')
-    left.textContent = `${i + 1}. ${e.name}`
+    left.textContent = `${medal(i)} ${e.name}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
     li.append(left, right)
     list.appendChild(li)
   })
+}
+
+/** 結算的名次／差距那行（再 N 分超越上一名）；text=null 時隱藏 */
+function setRankLine(text: string | null) {
+  overRankEl.textContent = text ?? ''
+  overRankEl.classList.toggle('hidden', !text)
+}
+
+let rankRequestId = 0
+async function showGlobalRank(score: number) {
+  const reqId = ++rankRequestId
+  const info = await fetchRank(score)
+  if (reqId !== rankRequestId) return // 較舊的請求晚回：放棄
+  if (!info) return setRankLine(null)
+  setRankLine(
+    info.gap === null || info.rank <= 1
+      ? STR.rankTop
+      : `${STR.rankGlobal(info.rank)} · ${STR.rankGap(info.gap)}`,
+  )
+}
+
+/** 本地榜的名次／差距（離線或未設定 Supabase 時） */
+function showLocalRank(score: number) {
+  if (lastRank === null) return setRankLine(null)
+  const board = loadLeaderboard()
+  const above = lastRank >= 2 ? board[lastRank - 2] : null
+  const gap = above ? above.score - score : null
+  setRankLine(gap === null ? STR.rankTopLocal : `${STR.rankLocal(lastRank)} · ${STR.rankGap(gap)}`)
 }
 
 function renderGameOver() {
@@ -183,7 +217,12 @@ function renderGameOver() {
   overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
   const sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
   overSubEl.textContent = sub
-  if (!REMOTE_ENABLED) renderLeaderboard()
+  if (REMOTE_ENABLED) {
+    setRankLine(null) // 全球名次稍後非同步補上
+  } else {
+    renderLeaderboard()
+    showLocalRank(score)
+  }
 }
 
 function todayKey(): string {
@@ -221,7 +260,7 @@ const game = new Game({
         pendingRemoteEntry = null
         void (async () => {
           await submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier)
-          await renderGlobalLeaderboard(toSubmit)
+          await Promise.all([renderGlobalLeaderboard(toSubmit), showGlobalRank(toSubmit.score)])
         })()
       }
     }
@@ -465,10 +504,12 @@ function fillBoard(list: HTMLOListElement, entries: { name?: string; score: numb
     list.appendChild(li)
     return
   }
+  const me = getPlayerName()
   entries.forEach((e, i) => {
     const li = document.createElement('li')
+    if (me && e.name === me) li.className = 'me' // 高亮自己（同名都算）
     const left = document.createElement('span')
-    left.textContent = `${i + 1}. ${e.name || planetName(e.maxTier)}`
+    left.textContent = `${medal(i)} ${e.name || planetName(e.maxTier)}`
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = String(e.score)
