@@ -426,6 +426,8 @@ export function drawPlanet(
   squeeze = 0,
   /** 焦躁等待 0~1：玩家久未投放時的不耐煩臉（半垂眼、往上瞟、直線嘴），預設 0 */
   bored = 0,
+  /** 打哈欠 0~1：閒置很久時隨機星球打哈欠（閉眼 + 大張嘴），預設 0 */
+  yawn = 0,
 ) {
   const r = tier.radius * scale
   const seed = tier.tier * 3.7 + 1
@@ -528,13 +530,15 @@ export function drawPlanet(
   const worry = danger * (1 - joy) * (1 - pain)
   const tired = bored * (1 - joy) * (1 - pain) * (1 - worry) // 不耐煩，最低優先
   const stress = Math.max(pain, worry)
+  // 打哈欠：閉眼大張嘴的短暫動畫；痛苦/危機時不打哈欠
+  const yawnA = Math.max(0, yawn) * (1 - pain) * (1 - worry)
 
   // ── 眼睛 ──
   const eyeScale = vEyeSize * (1 + 0.25 * joy)
   const squint = 1 - 0.6 * pain
   const shut = Math.min(1, Math.max(0, (pain - 0.45) / 0.25)) // 痛到 0.45→0.7 漸變成「><」緊閉
   const lookUp = tired * r * 0.05 // 不耐煩時往上瞟
-  const droop = 1 - 0.45 * tired // 不耐煩時上眼瞼壓低（半垂 → 變扁）
+  const droop = (1 - 0.45 * tired) * (1 - 0.85 * yawnA) // 不耐煩時半垂；打哈欠時閉起來
   g.fillStyle = INK
   g.strokeStyle = INK
   for (const dir of [-1, 1]) {
@@ -561,8 +565,8 @@ export function drawPlanet(
       g.globalAlpha = 1
     }
   }
-  // 眼神高光：平常/開心才有（痛苦緊閉、很睏半垂時不畫）
-  if (blink === 1 && pain < 0.5 && tired < 0.5 && shut < 0.5) {
+  // 眼神高光：平常/開心才有（痛苦緊閉、很睏半垂、打哈欠閉眼時不畫）
+  if (blink === 1 && pain < 0.5 && tired < 0.5 && shut < 0.5 && yawnA < 0.3) {
     g.fillStyle = '#FFF9EC'
     for (const dir of [-1, 1]) {
       g.beginPath()
@@ -607,7 +611,14 @@ export function drawPlanet(
   g.lineWidth = Math.max(1.5, r * 0.045)
   g.lineCap = 'round'
   g.lineJoin = 'round'
-  if (smileAlpha > 0.01) {
+  if (yawnA > 0.06) {
+    // 打哈欠：大大的圓張嘴（高度隨包絡漲縮）
+    g.beginPath()
+    g.ellipse(0, r * 0.18, r * 0.1 * (0.7 + 0.3 * yawnA), r * 0.17 * yawnA, 0, 0, Math.PI * 2)
+    g.fillStyle = '#5A3C3C'
+    g.fill()
+    g.stroke()
+  } else if (smileAlpha > 0.01) {
     const mouthR = r * (0.22 + 0.14 * joy) * vMouth
     const mouthSpread = 0.15 - 0.05 * joy
     g.globalAlpha = smileAlpha

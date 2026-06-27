@@ -25,7 +25,12 @@ interface PlanetMeta {
   squeeze: number
   /** 被 ≥4 顆鄰居包圍的持續秒數（要撐約 2 秒才轉成痛，瞬間擠不算） */
   crushTime: number
+  /** 上次開始打哈欠的時間（秒）；閒置夠久時隨機星球會輪流打哈欠，-999=沒在打 */
+  yawnStart: number
 }
+
+/** 打哈欠動畫長度（秒） */
+const YAWN_DUR = 1.4
 
 export type GameState = 'ready' | 'playing' | 'over'
 
@@ -84,6 +89,8 @@ export class Game {
   private waitTime = 0
   /** 全場一致的「焦躁等待」程度 0~1（閒置太久 → 不耐煩臉），平滑處理 */
   private idleMood = 0
+  /** 下一次安排隨機星球打哈欠的遊戲時間（秒），閒置 15 秒後開始 */
+  private nextYawnAt = 0
 
   private cb: GameCallbacks
   private rng: () => number
@@ -140,7 +147,7 @@ export class Game {
       frictionAir: 0.008,
       density: 0.0012,
     })
-    this.meta.set(body, { tier, bornAt: this.time, merged, squeeze: 0, crushTime: 0 })
+    this.meta.set(body, { tier, bornAt: this.time, merged, squeeze: 0, crushTime: 0, yawnStart: -999 })
     Composite.add(this.engine.world, body)
     return body
   }
@@ -221,6 +228,7 @@ export class Game {
     this.accumulator = 0
     this.waitTime = 0
     this.idleMood = 0
+    this.nextYawnAt = 0
     this.contacts.clear()
     this.reviveUsed = false
     this.state = 'ready'
@@ -255,6 +263,7 @@ export class Game {
       // 閒置擠壓：玩家懸停未投超過 5 秒，場上星球漸感不適
       if (this.state === 'playing' && this.dropCooldown === 0) this.waitTime += dt
       this.updateSqueeze(dt)
+      this.scheduleYawns()
     }
     this.particles.update(dt)
     this.meteors.update(dt, this.time)
@@ -289,6 +298,21 @@ export class Game {
       const rate = target > m.squeeze ? 1.4 : 2.2
       m.squeeze += (target - m.squeeze) * Math.min(1, rate * dt)
     }
+  }
+
+  /** 閒置超過 15 秒後，每隔幾秒挑一顆隨機星球打哈欠（無聊到打哈欠，增添趣味） */
+  private scheduleYawns() {
+    if (this.state !== 'playing' || this.waitTime <= 15) {
+      this.nextYawnAt = this.time // 一旦閒置超過 15 秒，立刻能打第一個哈欠
+      return
+    }
+    if (this.time < this.nextYawnAt) return
+    const bodies = Composite.allBodies(this.engine.world).filter(b => this.meta.has(b))
+    if (bodies.length > 0) {
+      const m = this.meta.get(bodies[Math.floor(this.rng() * bodies.length)])
+      if (m) m.yawnStart = this.time
+    }
+    this.nextYawnAt = this.time + 2.5 + this.rng() * 2.5 // 下一個哈欠 2.5~5 秒後
   }
 
   private processMerges() {
@@ -410,7 +434,10 @@ export class Game {
         this.state === 'over' || age <= 1
           ? 0
           : Math.min(1, Math.max(0, (BOARD.loseY + 40 - topY) / 50))
-      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, m.squeeze, this.idleMood)
+      // 打哈欠：sin 包絡，0→1→0（張嘴漸大再閉上）
+      const yt = (this.time - m.yawnStart) / YAWN_DUR
+      const yawn = yt >= 0 && yt <= 1 ? Math.sin(Math.PI * yt) : 0
+      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, m.squeeze, this.idleMood, yawn)
     }
 
     this.particles.draw(g)
