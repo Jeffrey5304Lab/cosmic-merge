@@ -50,6 +50,8 @@ nameInput.addEventListener('input', () => {
   } catch {
     /* 私密模式忽略 */
   }
+  // 結算畫面打字時即時更新榜上自己那筆的名字
+  if (REMOTE_ENABLED && pendingSubmit) renderBoardRows()
 })
 
 function getPlayerName(): string {
@@ -81,6 +83,8 @@ const countrySelect = $<HTMLSelectElement>('country-select')
     } catch {
       /* 私密模式忽略 */
     }
+    // 結算畫面換國家時即時更新榜上自己那筆的國旗
+    if (REMOTE_ENABLED && pendingSubmit) renderBoardRows()
   })
 }
 
@@ -190,31 +194,36 @@ function renderLeaderboard() {
 }
 
 let globalLeaderboardRequestId = 0
-async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
-  const requestId = ++globalLeaderboardRequestId
+let lastFetched: RemoteScoreEntry[] = []
+
+/** 本局尚未送出 DB 的成績，用即時輸入的名字/國家樂觀顯示在榜上 */
+function ownPendingEntry(): RemoteScoreEntry | null {
+  if (!pendingSubmit) return null
+  return {
+    name: getPlayerName() || 'Anonymous',
+    score: pendingSubmit.score,
+    maxTier: pendingSubmit.maxTier,
+    country: getCountry() || undefined,
+  }
+}
+
+/** 用快取的榜單 + 樂觀本局成績重畫結算排行榜（不重新抓，給打字即時更新用） */
+function renderBoardRows() {
   $('board-title').textContent = STR.globalLeaderboard
   const list = $<HTMLOListElement>('board-list')
-  const entries = await fetchTopScores(10)
-  // 慢的舊請求在新請求之後才回來：放棄，避免覆蓋掉較新的榜況
-  if (requestId !== globalLeaderboardRequestId) return
+  const own = ownPendingEntry()
+  const rows = own ? [...lastFetched, own].sort((a, b) => b.score - a.score).slice(0, 10) : lastFetched
   list.innerHTML = ''
-  if (entries.length === 0) {
+  if (rows.length === 0) {
     const li = document.createElement('li')
     li.className = 'b-empty'
     li.textContent = STR.noScores
     list.appendChild(li)
     return
   }
-  entries.forEach((e, i) => {
+  rows.forEach((e, i) => {
     const li = document.createElement('li')
-    if (
-      highlight &&
-      e.name === highlight.name &&
-      e.score === highlight.score &&
-      e.maxTier === highlight.maxTier
-    ) {
-      li.className = 'me'
-    }
+    if (e === own) li.className = 'me' // 樂觀插入的本局那筆
     const left = document.createElement('span')
     left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name}`
     const right = document.createElement('span')
@@ -223,6 +232,15 @@ async function renderGlobalLeaderboard(highlight: RemoteScoreEntry | null) {
     li.append(left, right)
     list.appendChild(li)
   })
+}
+
+async function renderGlobalLeaderboard() {
+  const requestId = ++globalLeaderboardRequestId
+  const entries = await fetchTopScores(10)
+  // 慢的舊請求在新請求之後才回來：放棄，避免覆蓋掉較新的榜況
+  if (requestId !== globalLeaderboardRequestId) return
+  lastFetched = entries
+  renderBoardRows()
 }
 
 /** 結算的名次／差距那行（再 N 分超越上一名）；text=null 時隱藏 */
@@ -306,30 +324,15 @@ const game = new Game({
     lastResult = { score, best, maxTier }
     const canRevive = !game.reviveUsed && score > 0
     reviveBtn.classList.toggle('hidden', !canRevive)
+    // 先不送出 DB：等玩家填完名字、按 Play Again 或離開分頁才送（見 flushPendingScore）
+    pendingSubmit = { score, maxTier }
     renderGameOver()
     overlayEl.classList.remove('hidden')
 
     if (REMOTE_ENABLED) {
-      const remoteEntry: RemoteScoreEntry = {
-        name: name || 'Anonymous',
-        score,
-        maxTier,
-        country: country || undefined,
-      }
-      if (canRevive) {
-        pendingRemoteEntry = remoteEntry
-        void renderGlobalLeaderboard(null)
-        // 名次只是查詢（不寫入），復活前先讓玩家看到目前會排到第幾
-        void showGlobalRank(score)
-      } else {
-        // 用本次（復活後最終）成績送出，不是復活前暫存的舊分數
-        const toSubmit = remoteEntry
-        pendingRemoteEntry = null
-        void (async () => {
-          await submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier, toSubmit.country)
-          await Promise.all([renderGlobalLeaderboard(toSubmit), showGlobalRank(toSubmit.score)])
-        })()
-      }
+      // 樂觀把本局成績插進榜上（用即時名字），名次用唯讀查詢即時算
+      void renderGlobalLeaderboard()
+      void showGlobalRank(score)
     }
   },
 })
@@ -337,18 +340,38 @@ const game = new Game({
 /* ── 復活（獎勵式廣告位） ── */
 const reviveBtn = $<HTMLButtonElement>('revive')
 let lastEntry: LeaderboardEntry | null = null
-let pendingRemoteEntry: RemoteScoreEntry | null = null
+/** 本局結算的成績，等玩家填完名字、離開結算畫面才送出（避免送出空名字） */
+let pendingSubmit: { score: number; maxTier: number } | null = null
+
+/** 用此刻填好的名字/國家把本局成績寫出去（本機 + 全球）；只送一次 */
+function flushPendingScore() {
+  if (!pendingSubmit) return
+  const { score, maxTier } = pendingSubmit
+  pendingSubmit = null
+  const name = getPlayerName()
+  const country = getCountry()
+  // 同步更新本機那筆的名字/國家（遊戲結束當下可能還沒填）
+  if (lastEntry) {
+    removeScore(lastEntry)
+    lastEntry = { ...lastEntry, name: name || undefined, country: country || undefined }
+    addScore(lastEntry)
+  }
+  if (REMOTE_ENABLED) {
+    void submitScore(name || 'Anonymous', score, maxTier, country || undefined)
+  }
+}
 
 reviveBtn.addEventListener('click', async () => {
   reviveBtn.disabled = true
   const watched = await ads.showRewarded('revive')
   reviveBtn.disabled = false
   if (!watched || !game.revive()) return
-  // 這局還沒結束：撤回剛記錄的排行榜成績，等真正結束再記
+  // 這局還沒結束：撤回剛記錄的排行榜成績、作廢待送成績，等真正結束再記
   if (lastEntry) {
     removeScore(lastEntry)
     lastEntry = null
   }
+  pendingSubmit = null
   lastResult = null
   overlayEl.classList.add('hidden')
 })
@@ -405,17 +428,16 @@ shareBtn.addEventListener('click', async () => {
 })
 
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
+  flushPendingScore() // 用此刻填好的名字送出本局成績
   overlayEl.classList.add('hidden')
   lastResult = null
   lastEntry = null
-  if (pendingRemoteEntry) {
-    const toSubmit = pendingRemoteEntry
-    pendingRemoteEntry = null
-    void submitScore(toSubmit.name, toSubmit.score, toSubmit.maxTier, toSubmit.country)
-  }
   exitSmashMode()
   game.restart()
 })
+
+// 關閉/切走分頁前盡力把還沒送出的成績寫出去（fetch 用 keepalive）
+window.addEventListener('pagehide', flushPendingScore)
 
 muteBtn.classList.toggle('muted', isMuted())
 muteBtn.addEventListener('click', () => {

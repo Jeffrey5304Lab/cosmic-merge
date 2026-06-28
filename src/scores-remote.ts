@@ -30,6 +30,7 @@ export async function submitScore(
       method: 'POST',
       headers: { ...headers(), Prefer: 'return=minimal' },
       body: JSON.stringify(body),
+      keepalive: true, // 讓 pagehide 時送出的請求能在分頁關閉後完成
     })
   try {
     if (country) {
