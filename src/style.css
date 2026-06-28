@@ -515,11 +515,6 @@ body {
   stroke-linejoin: round;
 }
 
-.btn-icon .icon-emoji {
-  font-size: 22px;
-  line-height: 1;
-}
-
 /* ── 排行榜分頁（全球 / 我的國家） ─────────────── */
 .lb-tabs {
   display: flex;
