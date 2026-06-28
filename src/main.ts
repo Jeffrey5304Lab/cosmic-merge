@@ -733,7 +733,7 @@ function pumpToasts() {
   const text = toastQueue.shift()
   if (!text) return
   toastBusy = true
-  achvToastEl.textContent = text
+  achvToastEl.innerHTML = text // 含手繪 SVG 圖示
   achvToastEl.classList.add('show')
   window.setTimeout(() => {
     achvToastEl.classList.remove('show')
@@ -747,7 +747,7 @@ function pumpToasts() {
 /** 依目前統計檢查成就，新解鎖的排入提示 */
 function checkAchievements() {
   for (const a of evaluateAchievements(loadStats())) {
-    toastQueue.push(`${a.icon} Achievement: ${a.name}!`)
+    toastQueue.push(`<span class="ti">${a.icon}</span>${a.name} unlocked!`)
   }
   pumpToasts()
 }

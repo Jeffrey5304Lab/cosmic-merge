@@ -604,9 +604,31 @@ body {
 }
 
 .achv-row .ico {
-  font-size: 22px;
   width: 28px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+/* 成就手繪 SVG 圖示（清單與 toast 共用線條風格） */
+.achv-row .ico svg,
+.achv-toast .ti svg {
+  stroke: var(--ink);
+  stroke-width: 1.7;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.achv-row .ico svg {
+  width: 24px;
+  height: 24px;
+}
+
+.achv-toast .ti svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  margin-right: 5px;
 }
 
 .achv-row .meta {
