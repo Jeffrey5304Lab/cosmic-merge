@@ -373,6 +373,7 @@ reviveBtn.addEventListener('click', async () => {
   }
   pendingSubmit = null
   lastResult = null
+  setModal(null) // 保險：確保沒有殘留的暫停狀態
   overlayEl.classList.add('hidden')
 })
 
@@ -429,6 +430,7 @@ shareBtn.addEventListener('click', async () => {
 
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
   flushPendingScore() // 用此刻填好的名字送出本局成績
+  setModal(null) // 保險：清掉任何殘留的暫停狀態，避免新局開局即凍結
   overlayEl.classList.add('hidden')
   lastResult = null
   lastEntry = null
@@ -669,6 +671,7 @@ function setLbMode(mode: 'global' | 'mine') {
 }
 
 function openLeaderboard() {
+  if (!overlayEl.classList.contains('hidden')) return // 結算畫面已有榜，避免疊在上面造成卡住
   setModal('leaderboard')
   syncTabs()
   void renderModalLeaderboard()
@@ -734,6 +737,7 @@ function renderAchievements() {
 }
 
 function openAchievements() {
+  if (!overlayEl.classList.contains('hidden')) return // 同上：結算畫面開著時不疊 modal
   setModal('achv')
   renderAchievements()
 }
