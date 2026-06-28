@@ -86,3 +86,11 @@ export function recordGame(score: number, maxTier: number): Stats {
   save(s)
   return s
 }
+
+/** 撤回剛才那次場數計算（玩家復活續玩 → 本局尚未真正結束） */
+export function undoGameCount(): Stats {
+  const s = loadStats()
+  s.games = Math.max(0, s.games - 1)
+  save(s)
+  return s
+}

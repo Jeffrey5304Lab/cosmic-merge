@@ -7,7 +7,7 @@ import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
-import { loadStats, recordCombo, recordGame, recordMerge } from './stats'
+import { loadStats, recordCombo, recordGame, recordMerge, undoGameCount } from './stats'
 import { ACHIEVEMENTS, evaluateAchievements, loadUnlocked } from './achievements'
 import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
@@ -366,11 +366,12 @@ reviveBtn.addEventListener('click', async () => {
   const watched = await ads.showRewarded('revive')
   reviveBtn.disabled = false
   if (!watched || !game.revive()) return
-  // 這局還沒結束：撤回剛記錄的排行榜成績、作廢待送成績，等真正結束再記
+  // 這局還沒結束：撤回剛記錄的排行榜成績與場數、作廢待送成績，等真正結束再記
   if (lastEntry) {
     removeScore(lastEntry)
     lastEntry = null
   }
+  undoGameCount() // 復活續玩 → 撤回 onGameOver 時 +1 的場數，避免一局算兩場
   pendingSubmit = null
   lastResult = null
   setModal(null) // 保險：確保沒有殘留的暫停狀態
