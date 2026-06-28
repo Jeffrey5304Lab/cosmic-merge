@@ -38,6 +38,8 @@ export interface GameCallbacks {
   onScore(score: number, best: number, maxTier: number): void
   onNext(tier: number): void
   onCombo(multiplier: number): void
+  /** 每次合成出一顆新星球時觸發（resultTier=新星球階級、multiplier=當下連鎖倍率） */
+  onMerge?(resultTier: number, multiplier: number): void
   onGameOver(score: number, best: number, maxTierReached: number): void
 }
 
@@ -356,6 +358,7 @@ export class Game {
 
       this.cb.onScore(this.score, this.best, this.maxTierReached)
       this.cb.onCombo(multiplier)
+      this.cb.onMerge?.(result, multiplier)
     }
     this.mergeQueue = []
   }

@@ -65,6 +65,17 @@
               </div>
             </div>
           </div>
+          <div id="achv-modal" class="overlay hidden">
+            <div class="overlay-card achv-card">
+              <span class="hud-label">STATS &amp; ACHIEVEMENTS</span>
+              <div id="stats-grid" class="stats-grid"></div>
+              <ul id="achv-list" class="achv-list"></ul>
+              <div class="overlay-actions">
+                <button id="achv-close" class="btn">Close</button>
+              </div>
+            </div>
+          </div>
+          <div id="achv-toast" class="achv-toast" aria-live="polite"></div>
           <div id="gameover" class="overlay hidden">
             <div class="overlay-card">
               <p class="overlay-emoji" id="over-emoji">💫</p>
@@ -106,6 +117,11 @@
               <path d="M17 5.6 C19.7 5.6 19.7 9.2 16.6 9.5" fill="none" />
               <path d="M12 13 V16.8" fill="none" />
               <path d="M8.8 19.8 H15.2 L14 16.8 H10 Z" fill="var(--honey)" />
+            </svg>
+          </button>
+          <button id="achv-btn" class="btn btn-ghost btn-icon" aria-label="Stats & achievements">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3.6 L14.5 8.7 L20.1 9.5 L16 13.4 L17 19 L12 16.3 L7 19 L8 13.4 L3.9 9.5 L9.5 8.7 Z" fill="var(--honey)" />
             </svg>
           </button>
           <button id="mute" class="btn btn-ghost btn-icon" aria-label="Toggle sound">

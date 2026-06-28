@@ -7,6 +7,8 @@ import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
+import { loadStats, recordCombo, recordGame, recordMerge } from './stats'
+import { ACHIEVEMENTS, evaluateAchievements, loadUnlocked } from './achievements'
 import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
@@ -282,7 +284,14 @@ const game = new Game({
   },
   onNext: renderNext,
   onCombo: showCombo,
+  onMerge(resultTier, multiplier) {
+    recordMerge(resultTier)
+    recordCombo(multiplier)
+    checkAchievements()
+  },
   onGameOver(score, best, maxTier) {
+    recordGame(score, maxTier)
+    checkAchievements()
     const name = getPlayerName()
     const country = getCountry()
     lastEntry = {
@@ -495,9 +504,9 @@ window.addEventListener('keydown', e => {
   // 焦點在輸入欄/選單時把鍵盤讓給表單：名字才能打空白、方向鍵才能選國家
   const t = e.target as HTMLElement | null
   if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return
-  // 排行榜開著時 Esc 關閉（在暫停守門之前處理，否則被擋掉）
+  // modal 開著時 Esc 關閉（在暫停守門之前處理，否則被擋掉）
   if (e.key === 'Escape' && paused) {
-    closeLeaderboard()
+    setModal(null)
     e.preventDefault()
     return
   }
@@ -564,9 +573,17 @@ const leaderboardBtn = $<HTMLButtonElement>('leaderboard-btn')
 const lbTabsEl = $<HTMLDivElement>('lb-tabs')
 const lbTabGlobal = $<HTMLButtonElement>('lb-tab-global')
 const lbTabMine = $<HTMLButtonElement>('lb-tab-mine')
+const achvModal = $<HTMLDivElement>('achv-modal')
 let paused = false
 let lbRequestId = 0
 let lbMode: 'global' | 'mine' = 'global'
+
+/** 同時管理兩個 modal：一次只開一個，開著就暫停物理（畫面凍結） */
+function setModal(which: 'leaderboard' | 'achv' | null) {
+  leaderboardModal.classList.toggle('hidden', which !== 'leaderboard')
+  achvModal.classList.toggle('hidden', which !== 'achv')
+  paused = which !== null
+}
 
 function fillBoard(
   list: HTMLOListElement,
@@ -630,14 +647,12 @@ function setLbMode(mode: 'global' | 'mine') {
 }
 
 function openLeaderboard() {
-  paused = true
+  setModal('leaderboard')
   syncTabs()
-  leaderboardModal.classList.remove('hidden')
   void renderModalLeaderboard()
 }
 function closeLeaderboard() {
-  paused = false
-  leaderboardModal.classList.add('hidden')
+  setModal(null)
 }
 
 leaderboardBtn.addEventListener('click', () => {
@@ -650,6 +665,92 @@ $<HTMLButtonElement>('lb-close').addEventListener('click', closeLeaderboard)
 leaderboardModal.addEventListener('click', (e) => {
   if (e.target === leaderboardModal) closeLeaderboard() // 點背景關閉
 })
+
+/* ── 統計與成就 modal ── */
+const achvBtn = $<HTMLButtonElement>('achv-btn')
+const statsGridEl = $<HTMLDivElement>('stats-grid')
+const achvListEl = $<HTMLUListElement>('achv-list')
+const achvToastEl = $<HTMLDivElement>('achv-toast')
+
+function renderAchievements() {
+  const s = loadStats()
+  const cells: [string, string][] = [
+    ['Games', fmt(s.games)],
+    ['Best', fmt(s.bestScore)],
+    ['Top planet', s.maxTier > 0 ? planetName(s.maxTier) : '—'],
+    ['Best combo', s.bestCombo > 1 ? `×${s.bestCombo}` : '—'],
+    ['Merges', fmt(s.totalMerges)],
+    ['Suns', fmt(s.suns)],
+  ]
+  statsGridEl.innerHTML = ''
+  for (const [k, v] of cells) {
+    const cell = document.createElement('div')
+    cell.className = 'stat-mini'
+    const vv = document.createElement('span')
+    vv.className = 'v'
+    vv.textContent = v
+    const kk = document.createElement('span')
+    kk.className = 'k'
+    kk.textContent = k
+    cell.append(vv, kk)
+    statsGridEl.appendChild(cell)
+  }
+  const unlocked = loadUnlocked()
+  achvListEl.innerHTML = ''
+  for (const a of ACHIEVEMENTS) {
+    const got = unlocked.has(a.id)
+    const li = document.createElement('li')
+    li.className = got ? 'achv-row' : 'achv-row locked'
+    li.innerHTML =
+      `<span class="ico">${a.icon}</span>` +
+      `<span class="meta"><span class="nm"></span><span class="ds"></span></span>` +
+      (got ? '<span class="done">✓</span>' : '')
+    li.querySelector('.nm')!.textContent = a.name
+    li.querySelector('.ds')!.textContent = a.desc
+    achvListEl.appendChild(li)
+  }
+}
+
+function openAchievements() {
+  setModal('achv')
+  renderAchievements()
+}
+
+achvBtn.addEventListener('click', () => {
+  achvBtn.blur()
+  openAchievements()
+})
+$<HTMLButtonElement>('achv-close').addEventListener('click', () => setModal(null))
+achvModal.addEventListener('click', (e) => {
+  if (e.target === achvModal) setModal(null) // 點背景關閉
+})
+
+/* ── 成就解鎖提示（toast，依序播放） ── */
+const toastQueue: string[] = []
+let toastBusy = false
+function pumpToasts() {
+  if (toastBusy) return
+  const text = toastQueue.shift()
+  if (!text) return
+  toastBusy = true
+  achvToastEl.textContent = text
+  achvToastEl.classList.add('show')
+  window.setTimeout(() => {
+    achvToastEl.classList.remove('show')
+    window.setTimeout(() => {
+      toastBusy = false
+      pumpToasts()
+    }, 350)
+  }, 2200)
+}
+
+/** 依目前統計檢查成就，新解鎖的排入提示 */
+function checkAchievements() {
+  for (const a of evaluateAchievements(loadStats())) {
+    toastQueue.push(`${a.icon} Achievement: ${a.name}!`)
+  }
+  pumpToasts()
+}
 
 /* ── 主迴圈 ── */
 let last = performance.now()

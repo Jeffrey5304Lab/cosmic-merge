@@ -543,6 +543,123 @@ body {
   background: rgba(243, 203, 87, 0.35);
 }
 
+/* ── 統計與成就 ─────────────────────── */
+.achv-card {
+  width: 86%;
+  max-width: 360px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stat-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(243, 203, 87, 0.16);
+  border-radius: 12px;
+  padding: 8px 4px;
+}
+
+.stat-mini .v {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.stat-mini .k {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.achv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.achv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(59, 48, 36, 0.05);
+}
+
+.achv-row.locked {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.achv-row .ico {
+  font-size: 22px;
+  width: 28px;
+  text-align: center;
+}
+
+.achv-row .meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.achv-row .nm {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.achv-row .ds {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.achv-row .done {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.achv-toast {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  box-shadow: 0 4px 0 rgba(59, 48, 36, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 5;
+  white-space: nowrap;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.achv-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 #mute .icon-sound-off,
 #mute.muted .icon-sound-on {
   display: none;
