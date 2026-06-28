@@ -356,7 +356,7 @@ function flushPendingScore() {
     lastEntry = { ...lastEntry, name: name || undefined, country: country || undefined }
     addScore(lastEntry)
   }
-  if (REMOTE_ENABLED) {
+  if (REMOTE_ENABLED && score > 0) {
     void submitScore(name || 'Anonymous', score, maxTier, country || undefined)
   }
 }
