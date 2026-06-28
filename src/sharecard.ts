@@ -72,7 +72,7 @@ export function renderShareCard(score: number, maxTier: number): HTMLCanvasEleme
   g.fillText(STR.score, W / 2, py + ph + 78)
   g.font = "92px 'Gochi Hand', cursive"
   g.fillStyle = '#E07A5F'
-  g.fillText(String(score), W / 2, py + ph + 162)
+  g.fillText(score.toLocaleString('en-US'), W / 2, py + ph + 162) // 千分位，與遊戲內一致
 
   // 日期
   g.font = "22px system-ui, sans-serif"
