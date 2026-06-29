@@ -741,55 +741,7 @@ body {
 }
 
 /* ── 模擬廣告畫面 ─────────────────── */
-.ad-mock {
-  position: fixed;
-  inset: 0;
-  background: rgba(59, 48, 36, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.ad-mock-box {
-  background: var(--card);
-  border: 3px solid var(--ink);
-  border-radius: 20px;
-  padding: 36px 60px;
-  text-align: center;
-  position: relative;
-  box-shadow: 0 6px 0 rgba(59, 48, 36, 0.4);
-}
-
-.ad-mock-tag {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  background: var(--honey);
-  border: 2px solid var(--ink);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 900;
-  padding: 1px 7px;
-  color: var(--ink);
-}
-
-.ad-mock-title {
-  font-size: 44px;
-}
-
-.ad-mock-count {
-  font-family: var(--font-display);
-  font-size: 40px;
-  color: var(--accent);
-}
-
-.ad-mock-slot {
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
+/* （v1 無廣告：原 .ad-mock 假廣告樣式已移除） */
 
 /* ── 進化圖鑑 ─────────────────────── */
 .evolution {

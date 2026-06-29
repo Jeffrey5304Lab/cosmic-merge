@@ -62,9 +62,8 @@ npx capacitor-assets generate --iconBackgroundColor '#F4E9D7' --splashBackground
 
 ## 6. ⚠️ 上架前必做（v1 無廣告）
 
-- [ ] **移除 Mock 廣告**：`src/ads.ts` 目前會跳一個假的「AD」3 秒視窗。v1 不接廣告 → 應改成
-  「復活 / 錘子」**直接給獎勵、不跳假廣告**（否則像壞掉的廣告，會被審核打槍）。
-  → 跟我說一聲，我把 `MockAdProvider` 換成即時授予版。
+- [x] ~~移除 Mock 廣告~~：已改用 `DirectGrantProvider`——復活/錘子直接給獎勵、不跳假廣告。
+  `AdProvider` 介面保留，之後接 AdMob 只需換掉 export。
 - [ ] **隱私政策**（兩家強制）：揭露排行榜會收集暱稱 / 國家 / 分數（存於 Supabase）。
   需要一個公開 URL（可放 GitHub Pages）。→ 我可代為起草。
 - [ ] **資料安全表單**：App Store 隱私標籤 / Google Play Data Safety 要勾選收集項目。

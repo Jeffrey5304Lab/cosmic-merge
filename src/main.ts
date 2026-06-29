@@ -409,13 +409,17 @@ hammerBtn.addEventListener('click', async () => {
     hintEl.classList.remove('hidden')
     return
   }
-  // 沒庫存：看廣告拿一支
+  // 沒庫存：兌現一支（v1 直接給；接真實廣告後＝看完才給），並直接進入敲擊模式
   hammerBtn.disabled = true
   const watched = await ads.showRewarded('hammer')
   hammerBtn.disabled = false
   if (watched) {
     addHammer()
     refreshHammerCount()
+    smashMode = true
+    hammerBtn.classList.add('armed')
+    hintTextEl.textContent = STR.hammerHint
+    hintEl.classList.remove('hidden')
   }
 })
 

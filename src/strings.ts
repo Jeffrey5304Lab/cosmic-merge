@@ -27,7 +27,7 @@ export const STR = {
   rankTop: "👑 You're #1 in the world!",
   rankTopLocal: '👑 Top of your board!',
   namePlaceholder: 'Your name',
-  revive: '💫 Revive (Ad)',
+  revive: '💫 Revive',
   hammer: 'Hammer (smash one planet)',
   hammerHint: '🔨 Tap a planet to smash it (tap again to cancel)',
   tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
