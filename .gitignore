@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Capacitor 原生專案（用 npx cap add ios/android 在本機產生；先不入庫避免肥大）
+/ios
+/android
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
