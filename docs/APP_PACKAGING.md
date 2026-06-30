@@ -42,14 +42,18 @@ npm run cap:sync
 
 ## 4. App 圖示與啟動畫面
 
-用官方工具一鍵生成（需一張 **1024×1024** 來源圖；目前只有 `public/icon-512.png`，先做一張 1024）：
+來源圖**已用遊戲本身的星球美術生成好**，放在 `assets/`：
+- `assets/icon.png`（1024²，微笑地球＋夜空，全出血供 OS 圓角遮罩）
+- `assets/splash.png` / `assets/splash-dark.png`（2732²，地球置中於奶油底）
+
+產生各平台尺寸（一行）：
 
 ```bash
 npm install -D @capacitor/assets
 npx capacitor-assets generate --iconBackgroundColor '#F4E9D7' --splashBackgroundColor '#F4E9D7'
 ```
 
-來源放 `assets/icon.png`（1024²）與 `assets/splash.png`（2732² 建議），會自動產生各平台尺寸。
+> 想換圖示風格：直接替換 `assets/icon.png`（1024²）再重跑上面指令即可。
 
 ## 5. 設定重點
 
