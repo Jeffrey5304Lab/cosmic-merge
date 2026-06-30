@@ -12,6 +12,7 @@ import {
   ShootingStars,
 } from './render'
 import { playDrop, playFanfare, playGameOver, playMerge } from './audio'
+import { buzz } from './haptics'
 
 const { Engine, Bodies, Body, Composite, Events } = Matter
 
@@ -351,10 +352,8 @@ export class Game {
       this.shake = Math.min(6, 1 + result * 0.5)
       if (result === MAX_TIER) playFanfare()
       else playMerge(result)
-      // 手機觸覺回饋：大星球震久一點（Node 測試環境沒有 navigator）
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate(8 + result * 3)
-      }
+      // 手機觸覺回饋：大星球震久一點（原生走 Capacitor Haptics、含 iOS）
+      buzz(8 + result * 3)
 
       this.cb.onScore(this.score, this.best, this.maxTierReached)
       this.cb.onCombo(multiplier)

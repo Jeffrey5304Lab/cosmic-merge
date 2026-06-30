@@ -1,3 +1,12 @@
+/* 自帶手寫字型（不再依賴 Google Fonts CDN；離線可用、無外部請求） */
+@font-face {
+  font-family: 'Gochi Hand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/gochi-hand.woff2') format('woff2');
+}
+
 :root {
   /* 手繪紙感色票 */
   --paper: #f4e9d7;

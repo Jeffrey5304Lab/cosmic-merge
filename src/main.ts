@@ -13,6 +13,7 @@ import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
 import { addHammer, getHammers, useHammer } from './inventory'
+import { Capacitor } from '@capacitor/core'
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id)
@@ -577,8 +578,8 @@ applyStrings()
 window.addEventListener('pointerdown', () => startMusic(), { once: true })
 window.addEventListener('keydown', () => startMusic(), { once: true })
 
-/* ── PWA 離線（只在正式版註冊，避免 dev 快取干擾） ── */
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+/* ── PWA 離線（只在正式版 Web 註冊；Capacitor 原生 App 資產為本地、不需 SW 且避免快取怪異） ── */
+if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   // 新版 SW（skipWaiting + clients.claim）接管時自動重整一次，
   // 讓使用者打開網站就拿到最新版，不必手動關分頁。
   let refreshing = false
