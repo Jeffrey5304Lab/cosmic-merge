@@ -52,7 +52,7 @@ nameInput.addEventListener('input', () => {
     /* 私密模式忽略 */
   }
   // 結算畫面打字時即時更新榜上自己那筆的名字
-  if (REMOTE_ENABLED && pendingSubmit) renderBoardRows()
+  if (REMOTE_ENABLED && lastResult) renderBoardRows()
 })
 
 function getPlayerName(): string {
@@ -85,7 +85,7 @@ const countrySelect = $<HTMLSelectElement>('country-select')
       /* 私密模式忽略 */
     }
     // 結算畫面換國家時即時更新榜上自己那筆的國旗
-    if (REMOTE_ENABLED && pendingSubmit) renderBoardRows()
+    if (REMOTE_ENABLED && lastResult) renderBoardRows()
   })
 }
 
@@ -197,13 +197,14 @@ function renderLeaderboard() {
 let globalLeaderboardRequestId = 0
 let lastFetched: RemoteScoreEntry[] = []
 
-/** 本局尚未送出 DB 的成績，用即時輸入的名字/國家樂觀顯示在榜上 */
+/** 本局成績用即時輸入的名字/國家樂觀顯示在榜上（結算畫面存活期間都在，
+ *  綁定 lastResult 而非 pendingSubmit——按下送出後仍要留著自己那列，不能消失） */
 function ownPendingEntry(): RemoteScoreEntry | null {
-  if (!pendingSubmit) return null
+  if (!lastResult || lastResult.score <= 0) return null
   return {
     name: getPlayerName() || 'Anonymous',
-    score: pendingSubmit.score,
-    maxTier: pendingSubmit.maxTier,
+    score: lastResult.score,
+    maxTier: lastResult.maxTier,
     country: getCountry() || undefined,
   }
 }
@@ -283,10 +284,18 @@ function renderGameOver() {
   overSubEl.textContent = sub
   if (REMOTE_ENABLED) {
     setRankLine(null) // 全球名次稍後非同步補上
+    resetSubmitButton(score)
   } else {
     renderLeaderboard()
     showLocalRank(score)
   }
+}
+
+/** 每次結算重置「送出到排行榜」按鈕：有分數才顯示、恢復可按狀態 */
+function resetSubmitButton(score: number) {
+  submitBtn.classList.toggle('hidden', score <= 0)
+  submitBtn.disabled = false
+  submitBtn.textContent = STR.submitScore
 }
 
 function todayKey(): string {
@@ -434,8 +443,18 @@ shareBtn.addEventListener('click', async () => {
   }
 })
 
+/* ── 明確「送出到排行榜」按鈕 ── */
+const submitBtn = $<HTMLButtonElement>('submit-score')
+submitBtn.addEventListener('click', () => {
+  flushPendingScore() // 用此刻填好的名字送出（idempotent：Play Again 再按不會重送）
+  submitBtn.disabled = true
+  submitBtn.textContent = STR.submitScoreDone
+  // 送出後回抓真榜；自己那列由 ownPendingEntry（綁 lastResult）撐著不會閃掉
+  if (REMOTE_ENABLED) void renderGlobalLeaderboard()
+})
+
 $<HTMLButtonElement>('restart').addEventListener('click', () => {
-  flushPendingScore() // 用此刻填好的名字送出本局成績
+  flushPendingScore() // 用此刻填好的名字送出本局成績（若已按過送出鈕則不會重送）
   setModal(null) // 保險：清掉任何殘留的暫停狀態，避免新局開局即凍結
   overlayEl.classList.add('hidden')
   lastResult = null

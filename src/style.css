@@ -313,6 +313,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 12px;
   transition: opacity 0.3s;
 }
 
@@ -330,6 +331,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* 卡片超過棋盤高度時（例：game-over 帶排行榜、鍵盤跳出縮小視窗）改為內部捲動，
+     確保 Play Again 等底部按鈕永遠點得到 */
+  max-height: 100%;
+  overflow-y: auto;
   animation: card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   box-shadow: 0 6px 0 rgba(59, 48, 36, 0.35);
   color: var(--ink);
@@ -497,6 +502,26 @@ body {
 .btn-secondary {
   background: var(--card);
   font-size: 16px;
+}
+
+/* 明確的「送出到排行榜」主行動：搶眼的珊瑚色，送出後轉為淡化的已完成狀態 */
+.btn-submit {
+  align-self: center;
+  font-size: 16px;
+  background: var(--accent);
+  color: var(--card);
+}
+
+.btn-submit:disabled {
+  background: var(--card);
+  color: var(--text-dim);
+  box-shadow: 0 4px 0 rgba(59, 48, 36, 0.25);
+  cursor: default;
+  transform: none;
+}
+
+.btn-submit.hidden {
+  display: none;
 }
 
 .btn-ghost {

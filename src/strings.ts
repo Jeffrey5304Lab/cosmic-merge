@@ -16,6 +16,8 @@ export const STR = {
   overNewRecord: (p: string) => `🏆 New record! Highest merge: ${p}`,
   overNormal: (p: string, b: number) => `Highest merge: ${p} · Best: ${b}`,
   restart: 'Play Again',
+  submitScore: '🏅 Submit to Leaderboard',
+  submitScoreDone: '✅ Submitted!',
   share: '📸 Share Score',
   shareDone: '✓ Card saved',
   leaderboard: 'TOP SCORES',
