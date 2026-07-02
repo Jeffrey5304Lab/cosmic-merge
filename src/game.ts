@@ -22,10 +22,6 @@ interface PlanetMeta {
   bornAt: number
   /** 是否由合併誕生（觸發開心臉與火花，普通掉落則否） */
   merged: boolean
-  /** 被擠壓痛苦程度 0~1，平滑累積/衰減（被壓久才痛、解除慢慢恢復） */
-  squeeze: number
-  /** 被 ≥4 顆鄰居包圍的持續秒數（要撐約 2 秒才轉成痛，瞬間擠不算） */
-  crushTime: number
   /** 上次開始打哈欠的時間（秒）；閒置夠久時隨機星球會輪流打哈欠，-999=沒在打 */
   yawnStart: number
 }
@@ -86,8 +82,6 @@ export class Game {
   private dangerTime = 0
   private shake = 0
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
-  /** 本物理步各星球貼到的鄰居星球集合（被越多顆包圍＝被擠越緊），每步重置 */
-  private contacts = new Map<Matter.Body, Set<Matter.Body>>()
   /** 自上次投放後玩家「懸停未投」的秒數（閒置不耐煩用） */
   private waitTime = 0
   /** 全場一致的「焦躁等待」程度 0~1（閒置太久 → 不耐煩臉），平滑處理 */
@@ -118,16 +112,6 @@ export class Game {
     }
     Events.on(this.engine, 'collisionStart', queueMergeable)
     Events.on(this.engine, 'collisionActive', queueMergeable)
-    // 持續接觸時記錄每顆星球被「幾顆星球」貼著（用 Set 去重，跨子步不重複計）
-    // → 被越多鄰居包圍＝被擠得越緊。比穿透深度可靠：堆疊靜止後穿透量趨近 0。
-    Events.on(this.engine, 'collisionActive', (e: Matter.IEventCollision<Matter.Engine>) => {
-      for (const pair of e.pairs) {
-        // 只算星球對星球（牆不算）：孤立靜置的球不會被誤判為被擠
-        if (!this.meta.has(pair.bodyA) || !this.meta.has(pair.bodyB)) continue
-        this.addContact(pair.bodyA, pair.bodyB)
-        this.addContact(pair.bodyB, pair.bodyA)
-      }
-    })
     this.cb.onNext(this.nextDropTier)
     this.cb.onScore(this.score, this.best, this.maxTierReached)
   }
@@ -150,7 +134,7 @@ export class Game {
       frictionAir: 0.008,
       density: 0.0012,
     })
-    this.meta.set(body, { tier, bornAt: this.time, merged, squeeze: 0, crushTime: 0, yawnStart: -999 })
+    this.meta.set(body, { tier, bornAt: this.time, merged, yawnStart: -999 })
     Composite.add(this.engine.world, body)
     return body
   }
@@ -232,7 +216,6 @@ export class Game {
     this.waitTime = 0
     this.idleMood = 0
     this.nextYawnAt = 0
-    this.contacts.clear()
     this.reviveUsed = false
     this.state = 'ready'
     this.currentTier = pickDropTier(this.rng)
@@ -253,7 +236,6 @@ export class Game {
       const step = 1 / 60
       this.accumulator += dt
       let steps = 0
-      this.contacts.clear() // 重置後由 collisionActive 重新統計本步的鄰居接觸
       while (this.accumulator >= step && steps < 5) {
         Engine.update(this.engine, step * 1000)
         this.accumulator -= step
@@ -263,44 +245,19 @@ export class Game {
       if (this.accumulator > step) this.accumulator = 0
       this.processMerges()
       this.checkGameOver(dt)
-      // 閒置擠壓：玩家懸停未投超過 5 秒，場上星球漸感不適
+      // 閒置不耐煩：玩家懸停未投超過 5 秒，場上星球漸感焦躁
       if (this.state === 'playing' && this.dropCooldown === 0) this.waitTime += dt
-      this.updateSqueeze(dt)
+      this.updateIdleMood(dt)
       this.scheduleYawns()
     }
     this.particles.update(dt)
     this.meteors.update(dt, this.time)
   }
 
-  /** 記錄 a 被鄰居 b 貼著（本物理步內去重） */
-  private addContact(a: Matter.Body, b: Matter.Body) {
-    let set = this.contacts.get(a)
-    if (!set) {
-      set = new Set()
-      this.contacts.set(a, set)
-    }
-    set.add(b)
-  }
-
-  /** 更新兩種獨立情緒：被擠壓（per-body 痛苦）與焦躁等待（全場一致的不耐煩） */
-  private updateSqueeze(dt: number) {
-    // 焦躁等待：玩家懸停未投，閒置 5 秒後開始、再 4 秒爬滿（全場共用）
+  /** 更新「焦躁等待」情緒（全場一致的不耐煩）：玩家懸停未投，閒置 5 秒後開始、再 4 秒爬滿 */
+  private updateIdleMood(dt: number) {
     const idleTarget = Math.min(1, Math.max(0, (this.waitTime - 5) / 4))
     this.idleMood += (idleTarget - this.idleMood) * Math.min(1, (idleTarget > this.idleMood ? 1.4 : 2.6) * dt)
-
-    for (const body of Composite.allBodies(this.engine.world)) {
-      const m = this.meta.get(body)
-      if (!m) continue
-      // 被擠壓：要被 ≥4 顆鄰居包圍「持續約 2 秒」才轉成痛（瞬間擠或單純堆疊不算）
-      const neighbors = this.contacts.get(body)?.size ?? 0
-      m.crushTime = neighbors >= 4 ? m.crushTime + dt : Math.max(0, m.crushTime - dt * 2)
-      const dwell = Math.min(1, m.crushTime / 2) // 撐滿 2 秒才到全強度
-      const mag = Math.min(1, Math.max(0, (neighbors - 3) / 3)) // 4 顆起痛、6 顆滿
-      const target = mag * dwell
-      // 痛感慢升（需持續受擠）、解除後慢恢復
-      const rate = target > m.squeeze ? 1.4 : 2.2
-      m.squeeze += (target - m.squeeze) * Math.min(1, rate * dt)
-    }
   }
 
   /** 閒置超過 15 秒後，每隔幾秒挑一顆隨機星球打哈欠（無聊到打哈欠，增添趣味） */
@@ -439,7 +396,7 @@ export class Game {
       // 打哈欠：sin 包絡，0→1→0（張嘴漸大再閉上）
       const yt = (this.time - m.yawnStart) / YAWN_DUR
       const yawn = yt >= 0 && yt <= 1 ? Math.sin(Math.PI * yt) : 0
-      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, m.squeeze, this.idleMood, yawn)
+      drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, this.idleMood, yawn)
     }
 
     this.particles.draw(g)
