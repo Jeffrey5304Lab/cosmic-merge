@@ -1,0 +1,29 @@
+name: Supabase keep-alive
+
+# 免費方案專案閒置 7 天會被自動暫停。每 3 天打一次真實查詢當作活動，避免被暫停。
+on:
+  schedule:
+    - cron: '17 6 */3 * *' # 每 3 天 06:17 UTC（避開整點尖峰；最長間隔 <4 天，遠低於 7 天門檻）
+  workflow_dispatch: # 也可在 Actions 頁手動觸發
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        # URL 與 anon key 本來就公開在 src/config.ts，這裡直接內嵌；
+        # 一次真實 DB 查詢即算作專案活動。
+        env:
+          SUPABASE_URL: https://ajbzzhcqpxyylnzgailx.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqYnp6aGNxcHh5eWxuemdhaWx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzOTE2MjQsImV4cCI6MjA5Nzk2NzYyNH0.dkyTCjQclakiRO6Q-kIRni-V0NAESmU7pBNon8Zh9P8
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -m 30 \
+            "$SUPABASE_URL/rest/v1/scores?select=score&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY")
+          echo "HTTP $code"
+          # 2xx 才算存活；其他（含被暫停/刪除時解析失敗的 000）讓 job 失敗，
+          # GitHub 會寄失敗通知，等於順便監控後端是否掉線。
+          case "$code" in
+            2*) echo "Supabase alive." ;;
+            *) echo "::error::Supabase keep-alive failed (HTTP $code)"; exit 1 ;;
+          esac
