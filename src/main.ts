@@ -241,7 +241,9 @@ async function renderGlobalLeaderboard() {
   const entries = await fetchTopScores(10)
   // 慢的舊請求在新請求之後才回來：放棄，避免覆蓋掉較新的榜況
   if (requestId !== globalLeaderboardRequestId) return
-  lastFetched = entries
+  // 連不上時 entries 為 null：保留上次快取（不覆蓋成空白），但仍重繪，
+  // 讓本局樂觀插入的那筆照樣顯示，玩家不會對著空榜卡住
+  if (entries !== null) lastFetched = entries
   renderBoardRows()
 }
 
@@ -675,6 +677,12 @@ async function renderModalLeaderboard() {
   lbListEl.innerHTML = '<li class="b-empty">…</li>'
   const entries = await fetchTopScores(10, mine ? country : undefined)
   if (reqId !== lbRequestId) return // 舊請求慢回：放棄，避免覆蓋新榜
+  if (entries === null) {
+    // 遠端連不上／逾時：退回本地榜，別讓玩家對著空白或轉圈的畫面卡住
+    lbTitleEl.textContent = STR.offlineLeaderboard
+    fillBoard(lbListEl, loadLeaderboard().slice(0, 10))
+    return
+  }
   fillBoard(lbListEl, entries)
 }
 

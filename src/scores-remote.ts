@@ -16,6 +16,20 @@ function headers(): Record<string, string> {
   }
 }
 
+/**
+ * fetch with an abort timeout，讓被暫停／很慢的後端「快速失敗」而不是把 UI 吊住。
+ * 用在會影響畫面的唯讀查詢；送出成績走 keepalive，不套用（避免中斷 pagehide 送出）。
+ */
+async function fetchWithTimeout(url: string, init: RequestInit = {}, ms = 6000): Promise<Response> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), ms)
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /** Submit a score to the global leaderboard. Returns true on success. */
 export async function submitScore(
   name: string,
@@ -53,7 +67,7 @@ export async function submitScore(
 export async function fetchRank(score: number): Promise<{ rank: number; gap: number | null } | null> {
   if (!REMOTE_ENABLED) return null
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${SUPABASE_URL}/rest/v1/scores?select=score&score=gt.${score}&order=score.asc&limit=1`,
       { headers: { ...headers(), Prefer: 'count=exact' } },
     )
@@ -75,20 +89,27 @@ export async function fetchRank(score: number): Promise<{ rank: number; gap: num
 
 /**
  * Fetch the top scores, highest first. Pass `country` (ISO alpha-2) to filter
- * to one country's board. Returns [] on failure.
+ * to one country's board.
+ * 回傳 `null` 代表「遠端連不上／逾時」（呼叫端可退回本地榜）；
+ * 回傳 `[]` 代表「遠端有回應但榜是空的」。
  */
-export async function fetchTopScores(limit = 10, country?: string): Promise<RemoteScoreEntry[]> {
-  if (!REMOTE_ENABLED) return []
+export async function fetchTopScores(
+  limit = 10,
+  country?: string,
+): Promise<RemoteScoreEntry[] | null> {
+  if (!REMOTE_ENABLED) return null
   const filter = country ? `&country=eq.${encodeURIComponent(country)}` : ''
   const url = (select: string) =>
     `${SUPABASE_URL}/rest/v1/scores?select=${select}&order=score.desc&limit=${limit}${filter}`
   try {
     // 先試帶 country；欄位未建時 (400) 退回不帶（僅在沒篩選國家時），榜單照常顯示
-    let res = await fetch(url('name,score,max_tier,country'), { headers: headers() })
-    if (!res.ok && !country) res = await fetch(url('name,score,max_tier'), { headers: headers() })
-    if (!res.ok) return []
+    let res = await fetchWithTimeout(url('name,score,max_tier,country'), { headers: headers() })
+    if (!res.ok && !country) {
+      res = await fetchWithTimeout(url('name,score,max_tier'), { headers: headers() })
+    }
+    if (!res.ok) return null
     const rows: unknown = await res.json()
-    if (!Array.isArray(rows)) return []
+    if (!Array.isArray(rows)) return null
     return rows
       .filter(
         (r): r is { name: string; score: number; max_tier: number; country?: string } =>
@@ -105,6 +126,6 @@ export async function fetchTopScores(limit = 10, country?: string): Promise<Remo
         country: typeof r.country === 'string' ? r.country : undefined,
       }))
   } catch {
-    return []
+    return null
   }
 }
