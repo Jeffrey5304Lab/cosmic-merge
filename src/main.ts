@@ -541,8 +541,10 @@ canvas.addEventListener('pointerup', e => {
     if (game.smash(toBoardX(e.clientX), toBoardY(e.clientY))) {
       useHammer()
       refreshHammerCount()
-      exitSmashMode()
     }
+    // 敲中或敲空都退出敲擊模式：以前敲空毫無反應也不退出，
+    // 之後的每一次點擊都被吞掉（不投放、不取消），玩家像是卡死
+    exitSmashMode()
     return
   }
   game.aim(toBoardX(e.clientX))

@@ -163,24 +163,34 @@ export class Game {
     return true
   }
 
-  /** 小錘子：敲掉指定座標的星球，成功回傳 true */
+  /**
+   * 小錘子：敲掉點擊處的星球，成功回傳 true。
+   * 手指點擊不精準（最小星球半徑僅 17），給 24px 容忍、取最近的一顆。
+   */
   smash(x: number, y: number): boolean {
     if (this.state === 'over') return false
+    let target: Matter.Body | null = null
+    let targetR = 0
+    let bestD = Infinity
     for (const body of Composite.allBodies(this.engine.world)) {
       const m = this.meta.get(body)
       if (!m) continue
       const r = TIERS[m.tier].radius
-      const dx = body.position.x - x
-      const dy = body.position.y - y
-      if (dx * dx + dy * dy <= r * r) {
-        this.particles.ring(body.position.x, body.position.y, TIERS[m.tier].color, r * 1.6)
-        this.particles.burst(body.position.x, body.position.y, TIERS[m.tier].color, 14, 160)
-        Composite.remove(this.engine.world, body)
-        playDrop()
-        return true
+      const d = Math.hypot(body.position.x - x, body.position.y - y)
+      if (d <= r + 24 && d < bestD) {
+        bestD = d
+        target = body
+        targetR = r
       }
     }
-    return false
+    if (!target) return false
+    const m = this.meta.get(target)
+    if (!m) return false
+    this.particles.ring(target.position.x, target.position.y, TIERS[m.tier].color, targetR * 1.6)
+    this.particles.burst(target.position.x, target.position.y, TIERS[m.tier].color, 14, 160)
+    Composite.remove(this.engine.world, target)
+    playDrop()
+    return true
   }
 
   /** 玩家瞄準（邏輯座標 x） */

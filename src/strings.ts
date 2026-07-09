@@ -32,7 +32,7 @@ export const STR = {
   namePlaceholder: 'Your name',
   revive: '💫 Revive',
   hammer: 'Hammer (smash one planet)',
-  hammerHint: '🔨 Tap a planet to smash it (tap again to cancel)',
+  hammerHint: '🔨 Tap a planet to smash it (tap empty space to cancel)',
   tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
 }
 

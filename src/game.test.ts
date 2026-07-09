@@ -122,6 +122,15 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.bodyCount).toBe(before - 1)
   })
 
+  it('小錘子 smash：敲空回傳 false、不影響場上星球（點遠處空地）', () => {
+    const { game } = makeGame()
+    simulate(game, 4, 0.5)
+    const before = game.bodyCount
+    // 頂端投放線附近沒有已落定星球（星球都堆在底部），遠超 24px 容忍
+    expect(game.smash(10, 10)).toBe(false)
+    expect(game.bodyCount).toBe(before)
+  })
+
   it('幀率抖動不會把已落定的星球踢飛（固定步長積分）', () => {
     // 固定種子：避免隨機落點偶爾造成邊緣案例導致測試不穩定
     const { game } = makeGame(mulberry32(42))
