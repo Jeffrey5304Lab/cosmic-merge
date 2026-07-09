@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Game, type GameCallbacks } from './game'
-import { mulberry32 } from './logic'
+import { mulberry32, SUPERNOVA_SCORE } from './logic'
+import { BOARD, MAX_TIER, TIERS } from './planets'
 
 /** 無頭模擬：固定步長推進物理 + 定時投放 */
 function makeGame(rng?: () => number) {
@@ -106,6 +107,42 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.state).toBe('over')
     expect(game.revive()).toBe(false)
     expect(events.gameOver).toBe(2)
+  })
+
+  it('超新星：兩顆太陽相撞雙雙消失、得大分、觸發 onSupernova 而非 onMerge', () => {
+    let supernovas = 0
+    let merges = 0
+    let lastScore = 0
+    const cb: GameCallbacks = {
+      onScore(score) {
+        lastScore = score
+      },
+      onNext() {},
+      onCombo() {},
+      onMerge() {
+        merges++
+      },
+      onSupernova() {
+        supernovas++
+      },
+      onGameOver() {},
+    }
+    const game = new Game(cb)
+    // 太陽半徑 134、板寬 460：兩顆並排必然交疊 → 立即碰撞
+    const r = TIERS[MAX_TIER].radius
+    const y = BOARD.height - r - 4
+    game.debugSpawn(MAX_TIER, r + 4, y)
+    game.debugSpawn(MAX_TIER, BOARD.width - r - 4, y)
+    expect(game.bodyCount).toBe(2)
+    simulate(game, 2)
+    expect(game.bodyCount).toBe(0) // 雙雙湮滅，沒有生出新星球
+    expect(supernovas).toBe(1)
+    expect(merges).toBe(0) // 超新星不算合成（避免太陽數重複計）
+    expect(lastScore).toBeGreaterThanOrEqual(SUPERNOVA_SCORE)
+    expect(game.score).toBe(lastScore)
+    // 之後照常能玩，物理沒有壞掉
+    simulate(game, 4, 0.5)
+    expect(game.state).not.toBe('over')
   })
 
   it('小錘子 smash：敲掉一顆星球', () => {

@@ -5,6 +5,9 @@ export function mergeScore(resultTier: number): number {
   return ((resultTier + 1) * (resultTier + 2)) / 2
 }
 
+/** 超新星得分：兩顆太陽相撞爆炸的基礎分（高於合出太陽的 66，連鎖倍率照乘） */
+export const SUPERNOVA_SCORE = 100
+
 /**
  * 抽下一顆投放星球：小星球權重高，且不超過可投放上限。
  * rng 可注入以便測試。

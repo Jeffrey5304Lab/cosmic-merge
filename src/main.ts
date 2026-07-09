@@ -7,7 +7,7 @@ import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
-import { loadStats, recordCombo, recordGame, recordMerge, undoGameCount } from './stats'
+import { loadStats, recordCombo, recordGame, recordMerge, recordSupernova, undoGameCount } from './stats'
 import { ACHIEVEMENTS, evaluateAchievements, loadUnlocked } from './achievements'
 import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
@@ -316,6 +316,11 @@ const game = new Game({
   onCombo: showCombo,
   onMerge(resultTier, multiplier) {
     recordMerge(resultTier)
+    recordCombo(multiplier)
+    checkAchievements()
+  },
+  onSupernova(multiplier) {
+    recordSupernova()
     recordCombo(multiplier)
     checkAchievements()
   },
@@ -741,6 +746,7 @@ function renderAchievements() {
     ['Best combo', s.bestCombo > 1 ? `×${s.bestCombo}` : '—'],
     ['Merges', fmt(s.totalMerges)],
     ['Suns', fmt(s.suns)],
+    ['Supernovas', fmt(s.supernovas)],
   ]
   statsGridEl.innerHTML = ''
   for (const [k, v] of cells) {

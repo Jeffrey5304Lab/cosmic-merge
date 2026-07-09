@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { loadStats, recordCombo, recordGame, recordMerge, undoGameCount } from './stats'
+import { loadStats, recordCombo, recordGame, recordMerge, recordSupernova, undoGameCount } from './stats'
 
 /** 測試環境（node）沒有 localStorage，用 Map 模擬，讓持久化邏輯可被驗證 */
 function mockLocalStorage() {
@@ -31,6 +31,7 @@ describe('stats（終身統計）', () => {
       bestCombo: 0,
       totalMerges: 0,
       suns: 0,
+      supernovas: 0,
     })
   })
 
@@ -49,6 +50,13 @@ describe('stats（終身統計）', () => {
     expect(s.games).toBe(2)
     expect(s.bestScore).toBe(1000)
     expect(s.maxTier).toBe(7)
+  })
+
+  it('recordSupernova 累計超新星數、不影響太陽數', () => {
+    recordSupernova()
+    const s = recordSupernova()
+    expect(s.supernovas).toBe(2)
+    expect(s.suns).toBe(0)
   })
 
   it('recordCombo 只留最佳倍率', () => {

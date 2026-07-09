@@ -20,7 +20,7 @@ function mockLocalStorage() {
   } as Storage
 }
 
-const base: Stats = { games: 0, bestScore: 0, maxTier: 0, bestCombo: 0, totalMerges: 0, suns: 0 }
+const base: Stats = { games: 0, bestScore: 0, maxTier: 0, bestCombo: 0, totalMerges: 0, suns: 0, supernovas: 0 }
 
 describe('achievements（成就）', () => {
   beforeEach(mockLocalStorage)
@@ -59,6 +59,11 @@ describe('achievements（成就）', () => {
   it('場數與合成門檻', () => {
     expect(evaluateAchievements({ ...base, games: 10 }).map(a => a.id)).toContain('games10')
     expect(evaluateAchievements({ ...base, totalMerges: 100 }).map(a => a.id)).toContain('merges100')
+  })
+
+  it('超新星門檻：撞過一次解鎖 Supernova，合出太陽不算', () => {
+    expect(evaluateAchievements({ ...base, maxTier: 10, suns: 3 }).map(a => a.id)).not.toContain('supernova')
+    expect(evaluateAchievements({ ...base, supernovas: 1 }).map(a => a.id)).toContain('supernova')
   })
 
   it('全空白統計不解鎖任何成就', () => {

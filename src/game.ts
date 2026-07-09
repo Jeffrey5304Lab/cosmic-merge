@@ -1,6 +1,6 @@
 import Matter from 'matter-js'
 import { BOARD, MAX_TIER, TIERS } from './planets'
-import { ComboTracker, mergeScore, nextTier, pickDropTier } from './logic'
+import { ComboTracker, mergeScore, nextTier, pickDropTier, SUPERNOVA_SCORE } from './logic'
 import { ParticleSystem } from './particles'
 import {
   drawAimLine,
@@ -11,7 +11,7 @@ import {
   makeStars,
   ShootingStars,
 } from './render'
-import { playDrop, playFanfare, playGameOver, playMerge } from './audio'
+import { playDrop, playFanfare, playGameOver, playMerge, playSupernova } from './audio'
 import { buzz } from './haptics'
 
 const { Engine, Bodies, Body, Composite, Events } = Matter
@@ -37,6 +37,8 @@ export interface GameCallbacks {
   onCombo(multiplier: number): void
   /** 每次合成出一顆新星球時觸發（resultTier=新星球階級、multiplier=當下連鎖倍率） */
   onMerge?(resultTier: number, multiplier: number): void
+  /** 兩顆太陽相撞爆成超新星時觸發（multiplier=當下連鎖倍率）；不會另外觸發 onMerge */
+  onSupernova?(multiplier: number): void
   onGameOver(score: number, best: number, maxTierReached: number): void
 }
 
@@ -105,7 +107,7 @@ export class Game {
       for (const pair of e.pairs) {
         const ma = this.meta.get(pair.bodyA)
         const mb = this.meta.get(pair.bodyB)
-        if (ma && mb && ma.tier === mb.tier && ma.tier < MAX_TIER) {
+        if (ma && mb && ma.tier === mb.tier) {
           this.mergeQueue.push({ a: pair.bodyA, b: pair.bodyB })
         }
       }
@@ -292,7 +294,37 @@ export class Game {
       const ma = this.meta.get(a)
       if (!ma) continue
       const result = nextTier(ma.tier)
-      if (result === null) continue
+      if (result === null) {
+        // 兩顆太陽相撞＝超新星：雙雙湮滅（不生成新星球）、大分數、全場震撼
+        merged.add(a)
+        merged.add(b)
+        const sx = (a.position.x + b.position.x) / 2
+        const sy = (a.position.y + b.position.y) / 2
+        Composite.remove(this.engine.world, a)
+        Composite.remove(this.engine.world, b)
+
+        const multiplier = this.combo.hit(this.time * 1000)
+        const gained = SUPERNOVA_SCORE * multiplier
+        this.score += gained
+        if (this.score > this.best) {
+          this.best = this.score
+          saveBest(this.best)
+        }
+
+        const sun = TIERS[MAX_TIER]
+        this.particles.ring(sx, sy, sun.color, sun.radius * 3)
+        this.particles.burst(sx, sy, sun.color, 40, 260)
+        this.particles.float(sx, sy - sun.radius, `SUPERNOVA! +${gained}${multiplier > 1 ? ` ×${multiplier}` : ''}`, '#FFD98A')
+        this.shake = 10
+        playSupernova()
+        buzz(40)
+
+        this.cb.onScore(this.score, this.best, this.maxTierReached)
+        this.cb.onCombo(multiplier)
+        // 不呼叫 onMerge：超新星沒有「合成出的星球」，也避免太陽數被重複計入統計
+        this.cb.onSupernova?.(multiplier)
+        continue
+      }
       merged.add(a)
       merged.add(b)
 
@@ -351,6 +383,11 @@ export class Game {
 
   get inDanger(): boolean {
     return this.dangerTime > 0
+  }
+
+  /** 直接生成一顆指定階級的星球，供測試與 debug（例：擺兩顆太陽驗證超新星） */
+  debugSpawn(tier: number, x: number, y: number) {
+    this.spawnPlanet(tier, x, y)
   }
 
   /** 場上星球數（不含牆），供測試與 debug */

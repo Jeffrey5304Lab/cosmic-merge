@@ -158,6 +158,13 @@ export function playFanfare() {
   notes.forEach((f, i) => blip(f, 0.25, 'triangle', 0.18, i * 0.12))
 }
 
+/** 超新星：低頻爆炸轟鳴 + 上行琶音的餘暉 */
+export function playSupernova() {
+  blip(80, 0.5, 'sawtooth', 0.3)
+  const notes = [523, 659, 784, 1047, 1319]
+  notes.forEach((f, i) => blip(f, 0.22, 'triangle', 0.14, 0.12 + i * 0.09))
+}
+
 /** 遊戲結束 */
 export function playGameOver() {
   const notes = [392, 330, 262, 196]

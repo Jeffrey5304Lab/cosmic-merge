@@ -14,6 +14,8 @@ export interface Stats {
   totalMerges: number
   /** 合成出太陽的次數 */
   suns: number
+  /** 兩顆太陽相撞爆成超新星的次數 */
+  supernovas: number
 }
 
 const KEY = 'cosmic-merge:stats'
@@ -25,6 +27,7 @@ const EMPTY: Stats = {
   bestCombo: 0,
   totalMerges: 0,
   suns: 0,
+  supernovas: 0,
 }
 
 export function loadStats(): Stats {
@@ -39,6 +42,7 @@ export function loadStats(): Stats {
       bestCombo: num(parsed.bestCombo),
       totalMerges: num(parsed.totalMerges),
       suns: num(parsed.suns),
+      supernovas: num(parsed.supernovas),
     }
   } catch {
     return { ...EMPTY }
@@ -63,6 +67,14 @@ export function recordMerge(resultTier: number): Stats {
   s.totalMerges += 1
   s.maxTier = Math.max(s.maxTier, resultTier)
   if (resultTier >= MAX_TIER) s.suns += 1
+  save(s)
+  return s
+}
+
+/** 記錄一次超新星（兩顆太陽相撞爆炸） */
+export function recordSupernova(): Stats {
+  const s = loadStats()
+  s.supernovas += 1
   save(s)
   return s
 }
