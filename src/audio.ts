@@ -128,6 +128,9 @@ export function startMusic() {
   let nextTime = ac.currentTime + 0.15
   // lookahead 排程：每 600ms 往前排 1.2 秒
   setInterval(() => {
+    // 分頁退到背景時 timer 被節流，nextTime 可能落後 currentTime 一大截：
+    // 直接快轉到現在，避免切回分頁瞬間補排幾百顆過期震盪器（CPU 尖峰＋疊音）
+    if (nextTime < ac.currentTime) nextTime = ac.currentTime + 0.1
     while (nextTime < ac.currentTime + 1.2) {
       scheduleChord(ac, filter, CHORDS[bar % CHORDS.length], nextTime, chordDur + 0.4)
       bar++
