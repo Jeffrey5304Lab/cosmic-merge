@@ -1,12 +1,12 @@
 /** 終身個人統計：localStorage 持久化，跨場累計 */
-import { MAX_TIER } from './planets'
+import { SUN_TIER } from './planets'
 
 export interface Stats {
   /** 玩過的總場數 */
   games: number
   /** 歷史最高分 */
   bestScore: number
-  /** 歷史合成到的最高階級（0-10） */
+  /** 歷史合成/發現到的最高階級（0-10 行星鏈、11+ 系外恆星） */
   maxTier: number
   /** 歷史最佳連鎖倍率 */
   bestCombo: number
@@ -61,20 +61,28 @@ function save(s: Stats) {
   }
 }
 
-/** 記錄一次合成（更新最高階級、總合成數、太陽數） */
+/** 記錄一次合成（更新最高階級、總合成數、恆星數——太陽或任何系外恆星都算） */
 export function recordMerge(resultTier: number): Stats {
   const s = loadStats()
   s.totalMerges += 1
   s.maxTier = Math.max(s.maxTier, resultTier)
-  if (resultTier >= MAX_TIER) s.suns += 1
+  if (resultTier >= SUN_TIER) s.suns += 1
   save(s)
   return s
 }
 
-/** 記錄一次超新星（兩顆太陽相撞爆炸） */
+/** 記錄一次超新星（頂階恆星相撞爆成黑洞） */
 export function recordSupernova(): Stats {
   const s = loadStats()
   s.supernovas += 1
+  save(s)
+  return s
+}
+
+/** 記錄黑洞後發現一顆新恆星（只更新最高階級；不算合成、不重複計恆星數） */
+export function recordDiscovery(tier: number): Stats {
+  const s = loadStats()
+  s.maxTier = Math.max(s.maxTier, tier)
   save(s)
   return s
 }

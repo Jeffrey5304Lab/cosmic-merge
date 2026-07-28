@@ -43,6 +43,7 @@
         <div id="stage" class="stage">
           <canvas id="game"></canvas>
           <div id="combo" class="combo" aria-live="polite"></div>
+          <div id="discover" class="discover" aria-live="polite"></div>
           <div id="tutorial" class="tutorial hidden"><p id="tutorial-text"></p></div>
           <div id="hint" class="tutorial hidden"><p id="hint-text"></p></div>
           <div id="leaderboard-modal" class="overlay hidden">
@@ -136,7 +137,10 @@
       </div>
 
       <footer class="evolution">
-        <span id="label-evolution" class="hud-label">EVOLUTION</span>
+        <div class="chart-tabs">
+          <button id="tab-evolution" class="chart-tab active" type="button">EVOLUTION</button>
+          <button id="tab-stars" class="chart-tab" type="button">STARS</button>
+        </div>
         <canvas id="chart" width="640" height="72"></canvas>
       </footer>
     </div>

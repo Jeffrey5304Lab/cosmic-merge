@@ -268,6 +268,32 @@ body {
   }
 }
 
+/* ── 發現新恆星橫幅 ────────────────── */
+.discover {
+  position: absolute;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #ffe9b0;
+  text-shadow:
+    2px 2px 0 var(--ink),
+    -1px -1px 0 var(--ink),
+    1px -1px 0 var(--ink),
+    -1px 1px 0 var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.discover.show {
+  opacity: 1;
+  animation: combo-pop 0.45s ease-out;
+}
+
 /* ── 新手教學提示 ─────────────────── */
 .tutorial {
   position: absolute;
@@ -292,6 +318,18 @@ body {
 
 .tutorial.hidden {
   opacity: 0;
+}
+
+/* 錘子提示迷你模式：看過一次後只顯示小圖示，點擊展開完整說明 */
+.tutorial.clickable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.tutorial.mini {
+  padding: 8px 14px;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
 @keyframes tutorial-bob {
@@ -791,6 +829,30 @@ body {
   width: 100%;
   max-width: 560px;
   height: auto;
+}
+
+/* 圖鑑分頁：同一列在「行星進化」與「恆星發現」間切換，不多佔空間 */
+.chart-tabs {
+  display: flex;
+  gap: 16px;
+}
+
+.chart-tab {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 1px 2px;
+  border-bottom: 2px solid transparent;
+}
+
+.chart-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--honey);
 }
 
 /* ── 手機直向：側欄收進舞台上方 ───── */

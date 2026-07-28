@@ -10,6 +10,8 @@ export const STR = {
   next: 'NEXT',
   bestMerge: 'TOP MERGE',
   evolution: 'EVOLUTION',
+  starsTab: 'STARS',
+  newStarBanner: (name: string) => `🌟 New star discovered: ${name}!`,
   mute: 'Toggle sound',
   overTitle: 'The cosmos is full!',
   overScore: (s: number) => `You scored <strong>${s.toLocaleString('en-US')}</strong>`,
@@ -33,6 +35,7 @@ export const STR = {
   revive: '💫 Revive',
   hammer: 'Hammer (smash one planet)',
   hammerHint: '🔨 Tap a planet to smash it (tap empty space to cancel)',
+  hammerHintMini: '🔨❓',
   tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
 }
 

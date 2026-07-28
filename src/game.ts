@@ -1,14 +1,18 @@
 import Matter from 'matter-js'
-import { BOARD, MAX_TIER, TIERS } from './planets'
+import { BOARD, SUN_TIER, TIERS } from './planets'
 import { ComboTracker, mergeScore, nextTier, pickDropTier, SUPERNOVA_SCORE } from './logic'
+import { discoverNext, topUnlockedTier } from './discovery'
 import { ParticleSystem } from './particles'
 import {
+  BH_PHASE,
+  bhProgress,
   drawAimLine,
   drawBackground,
   drawBlackHole,
   drawDangerVignette,
   drawLoseLine,
   drawPlanet,
+  drawSupernovaFlash,
   makeStars,
   ShootingStars,
 } from './render'
@@ -30,18 +34,19 @@ interface PlanetMeta {
 /** 打哈欠動畫長度（秒） */
 const YAWN_DUR = 1.4
 
-/** 黑洞吞噬事件總長度（秒）：時間到必定強制清空剩餘星球，動畫不會卡住 */
-const BLACK_HOLE_DUR = 1.1
-
 interface BlackHoleEvent {
   x: number
   y: number
-  /** 已進行秒數 */
+  /** 已進行秒數（時間軸見 render.ts 的 BH_PHASE；到 total 必定結算，動畫不會卡住） */
   t: number
-  /** 本次超新星的連鎖倍率（在雙太陽相撞當下就鎖定） */
+  /** 相撞的恆星階級（決定爆發粒子的顏色） */
+  sourceTier: number
+  /** 本次超新星的連鎖倍率（在頂階恆星相撞當下就鎖定） */
   multiplier: number
   /** 吞掉的星球換算分數累計（用 mergeScore 換算，星球越多/越大分數越誇張） */
   absorbed: number
+  /** 吞噬期結束時是否已強制清空剩餘星球（只做一次） */
+  cleared: boolean
 }
 
 export type GameState = 'ready' | 'playing' | 'over'
@@ -52,8 +57,10 @@ export interface GameCallbacks {
   onCombo(multiplier: number): void
   /** 每次合成出一顆新星球時觸發（resultTier=新星球階級、multiplier=當下連鎖倍率） */
   onMerge?(resultTier: number, multiplier: number): void
-  /** 兩顆太陽相撞爆成超新星時觸發（multiplier=當下連鎖倍率）；不會另外觸發 onMerge */
+  /** 頂階恆星相撞爆成超新星（黑洞）時觸發（multiplier=當下連鎖倍率）；不會另外觸發 onMerge */
   onSupernova?(multiplier: number): void
+  /** 黑洞結算後發現一顆新的系外恆星時觸發（tier=新恆星階級） */
+  onDiscover?(tier: number): void
   onGameOver(score: number, best: number, maxTierReached: number): void
 }
 
@@ -317,9 +324,9 @@ export class Game {
       if (merged.has(a) || merged.has(b)) continue
       const ma = this.meta.get(a)
       if (!ma) continue
-      const result = nextTier(ma.tier)
+      const result = nextTier(ma.tier, topUnlockedTier())
       if (result === null) {
-        // 兩顆太陽相撞：塌陷成黑洞，兩顆太陽先湮滅，開始吞噬全場的過場事件
+        // 頂階恆星相撞：塌陷成黑洞，兩顆恆星先湮滅，開始吞噬全場的過場事件
         merged.add(a)
         merged.add(b)
         const sx = (a.position.x + b.position.x) / 2
@@ -328,11 +335,11 @@ export class Game {
         Composite.remove(this.engine.world, b)
 
         const multiplier = this.combo.hit(this.time * 1000)
-        this.blackHole = { x: sx, y: sy, t: 0, multiplier, absorbed: 0 }
+        this.blackHole = { x: sx, y: sy, t: 0, sourceTier: ma.tier, multiplier, absorbed: 0, cleared: false }
 
-        const sun = TIERS[MAX_TIER]
-        this.particles.ring(sx, sy, sun.color, sun.radius * 3)
-        this.particles.burst(sx, sy, sun.color, 40, 260)
+        const src = TIERS[ma.tier]
+        this.particles.ring(sx, sy, src.color, src.radius * 3)
+        this.particles.burst(sx, sy, src.color, 40, 260)
         this.shake = 10
         playSupernova()
         buzz(40)
@@ -364,7 +371,7 @@ export class Game {
       this.particles.burst(mx, my, tierDef.color, 10 + result * 3, 120 + result * 25)
       this.particles.float(mx, my - tierDef.radius, `+${gained}${multiplier > 1 ? ` ×${multiplier}` : ''}`, '#F6EAC9')
       this.shake = Math.min(6, 1 + result * 0.5)
-      if (result === MAX_TIER) playFanfare()
+      if (result >= SUN_TIER) playFanfare() // 合成出太陽或任何恆星都值得號角
       else playMerge(result)
       // 手機觸覺回饋：大星球震久一點（原生走 Capacitor Haptics、含 iOS）
       buzz(8 + result * 3)
@@ -377,33 +384,61 @@ export class Game {
   }
 
   /**
-   * 黑洞吞噬過場：事件視界隨時間長大，範圍內的星球被吸入（換算分數、爆裂消失），
-   * 範圍外的則被拉往中心。時間到（BLACK_HOLE_DUR）不論吞完沒都強制清空剩餘星球，
-   * 動畫必定在有限時間內結束，不會卡關。
+   * 黑洞吞噬過場（時間軸見 render.ts 的 BH_PHASE）：
+   * 吞噬期內事件視界擴張、範圍內星球被吸入（換算分數、爆裂消失），
+   * 範圍外的被螺旋拉往中心（含切向分量＝漩渦感）、爆裂粒子也被吸進洞裡。
+   * 吞噬期結束強制清空剩餘星球；終幕塌縮白閃後結算，動畫必定在有限時間內結束。
    */
   private updateBlackHole(dt: number) {
     const bh = this.blackHole
     if (!bh) return
     bh.t += dt
-    const progress = Math.min(1, bh.t / BLACK_HOLE_DUR)
-    const captureR = 30 + progress * 240
-    const pullStrength = 0.0003 + progress * 0.0012
+    const { devour, finale } = bhProgress(bh.t)
+    // 吞噬全程持續震動，越吞越劇烈、終幕漸息
+    this.shake = Math.max(this.shake, 2 + 7 * devour * (1 - finale))
 
-    for (const body of Composite.allBodies(this.engine.world)) {
-      const m = this.meta.get(body)
-      if (!m) continue
-      const dx = bh.x - body.position.x
-      const dy = bh.y - body.position.y
-      const dist = Math.hypot(dx, dy) || 1
-      if (dist < captureR + TIERS[m.tier].radius * 0.3) {
-        this.absorbPlanet(body, m)
-        continue
+    if (bh.t < BH_PHASE.devourEnd) {
+      // 捕捉半徑二次加速擴張：先醞釀、後半口氣掃過全場
+      const captureR = 36 + devour * devour * 900
+      const pullStrength = 0.0005 + devour * 0.0035
+
+      for (const body of Composite.allBodies(this.engine.world)) {
+        const m = this.meta.get(body)
+        if (!m) continue
+        const dx = bh.x - body.position.x
+        const dy = bh.y - body.position.y
+        const dist = Math.hypot(dx, dy) || 1
+        if (dist < captureR + TIERS[m.tier].radius * 0.3) {
+          this.absorbPlanet(body, m)
+          continue
+        }
+        // 向心 + 切向分量：星球螺旋墜入而非直線撞進去
+        const pull = pullStrength * body.mass
+        Body.applyForce(body, body.position, {
+          x: (dx / dist) * pull + (-dy / dist) * pull * 0.55,
+          y: (dy / dist) * pull + (dx / dist) * pull * 0.55,
+        })
       }
-      const pull = pullStrength * body.mass
-      Body.applyForce(body, body.position, { x: (dx / dist) * pull, y: (dy / dist) * pull })
+
+      // 爆裂粒子也被吸進洞裡：碎屑流成吸積流的一部分
+      for (const p of this.particles.particles) {
+        const dx = bh.x - p.x
+        const dy = bh.y - p.y
+        const d = Math.hypot(dx, dy) || 1
+        const acc = 1500 * (0.3 + devour)
+        p.vx += (dx / d) * acc * dt
+        p.vy += ((dy / d) * acc - 400) * dt // -400 抵銷粒子系統本身的重力
+      }
+    } else if (!bh.cleared) {
+      // 吞噬期結束：強制掃尾，保證終幕白閃時場上已空
+      bh.cleared = true
+      for (const body of Composite.allBodies(this.engine.world)) {
+        const m = this.meta.get(body)
+        if (m) this.absorbPlanet(body, m)
+      }
     }
 
-    if (bh.t >= BLACK_HOLE_DUR) this.finishBlackHole()
+    if (bh.t >= BH_PHASE.total) this.finishBlackHole()
   }
 
   /** 一顆星球被黑洞吞入：換算分數累計、爆裂粒子、從場上移除 */
@@ -415,14 +450,14 @@ export class Game {
     Composite.remove(this.engine.world, body)
   }
 
-  /** 黑洞事件結算：強制掃尾清空剩餘星球、依吞噬量給分、播放收尾特效 */
+  /** 黑洞事件結算：依吞噬量給分、發現下一顆系外恆星（在黑洞原地誕生）、播放收尾特效 */
   private finishBlackHole() {
     const bh = this.blackHole
     if (!bh) return
+    // 保險掃尾（正常流程在吞噬期結束就清空了）
     for (const body of Composite.allBodies(this.engine.world)) {
       const m = this.meta.get(body)
-      if (!m) continue
-      this.absorbPlanet(body, m)
+      if (m) this.absorbPlanet(body, m)
     }
 
     const gained = (SUPERNOVA_SCORE + bh.absorbed) * bh.multiplier
@@ -432,17 +467,29 @@ export class Game {
       saveBest(this.best)
     }
 
-    this.particles.ring(bh.x, bh.y, '#FFE9B0', TIERS[MAX_TIER].radius * 5)
+    this.particles.ring(bh.x, bh.y, '#FFE9B0', 480)
     this.particles.burst(bh.x, bh.y, '#FFE9B0', 60, 340)
-    this.particles.float(bh.x, bh.y - 40, `黑洞吞噬 +${gained}${bh.multiplier > 1 ? ` ×${bh.multiplier}` : ''}`, '#FFD98A')
+    this.particles.float(bh.x, bh.y - 40, `Black hole +${gained}${bh.multiplier > 1 ? ` ×${bh.multiplier}` : ''}`, '#FFD98A')
     this.shake = 14
     playFanfare()
     buzz(60)
 
+    // 發現新恆星：黑洞塌縮的原地誕生一顆前所未見的恆星（跨局永久記錄）
+    const newTier = discoverNext()
+    if (newTier !== null) {
+      const def = TIERS[newTier]
+      const sx = Math.min(Math.max(bh.x, def.radius + 4), BOARD.width - def.radius - 4)
+      const sy = Math.min(Math.max(bh.y, def.radius + 40), BOARD.height - def.radius - 2)
+      this.spawnPlanet(newTier, sx, sy, true)
+      this.maxTierReached = Math.max(this.maxTierReached, newTier)
+      this.particles.float(sx, sy - def.radius - 18, `⭐ ${def.name} discovered!`, '#FFE9B0')
+    }
+
     this.cb.onScore(this.score, this.best, this.maxTierReached)
     this.cb.onCombo(bh.multiplier)
-    // 不呼叫 onMerge：黑洞沒有「合成出的星球」，也避免太陽數被重複計入統計
+    // 不呼叫 onMerge：黑洞沒有「合成出的星球」，也避免恆星數被重複計入統計
     this.cb.onSupernova?.(bh.multiplier)
+    if (newTier !== null) this.cb.onDiscover?.(newTier)
 
     this.blackHole = null
     this.dangerTime = 0 // 全場剛被清空，不該立刻又被判定瀕死
@@ -508,7 +555,8 @@ export class Game {
       drawDangerVignette(g, this.time, Math.min(1, this.dangerTime / 1.2 + 0.4))
     }
 
-    if (this.state !== 'over') {
+    if (this.state !== 'over' && !this.blackHole) {
+      // 黑洞過場中不畫瞄準線與預備星球：投放被鎖，畫了只會干擾大場面
       drawAimLine(g, this.aimX, TIERS[this.currentTier].radius, this.time)
       // 預備投放的星球（懸浮在頂端）
       const hover = Math.sin(this.time * 3) * 3
@@ -534,10 +582,15 @@ export class Game {
     }
 
     if (this.blackHole) {
-      drawBlackHole(g, this.blackHole.x, this.blackHole.y, Math.min(1, this.blackHole.t / BLACK_HOLE_DUR), this.time)
+      // 全視窗吞噬：暗幕壓在星球上、粒子（被吸入的碎屑）疊在暗幕上
+      drawBlackHole(g, this.blackHole.x, this.blackHole.y, this.blackHole.t, this.time, this.stars)
     }
 
     this.particles.draw(g)
+    if (this.blackHole) {
+      // 終幕白閃疊在最上層：黑洞塌縮、整個宇宙亮起來，然後新恆星誕生
+      drawSupernovaFlash(g, this.blackHole.x, this.blackHole.y, this.blackHole.t)
+    }
     g.restore()
   }
 }

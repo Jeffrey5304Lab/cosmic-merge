@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ComboTracker, mergeScore, mulberry32, nextTier, pickDropTier } from './logic'
-import { BOARD, DROPPABLE_TIERS, MAX_TIER, TIERS } from './planets'
+import { BOARD, DROPPABLE_TIERS, MAX_TIER, SUN_TIER, TIERS } from './planets'
 
 describe('TIERS 設定', () => {
   it('半徑嚴格遞增（大星球一定比小星球大）', () => {
@@ -50,8 +50,16 @@ describe('nextTier', () => {
     expect(nextTier(MAX_TIER - 1)).toBe(MAX_TIER)
   })
 
-  it('太陽（最高階）不再合成', () => {
+  it('絕對最高階（最後一顆恆星）不再合成', () => {
     expect(nextTier(MAX_TIER)).toBeNull()
+  })
+
+  it('撞上「已解鎖上限」回傳 null（塌陷成黑洞）', () => {
+    // 尚未發現任何恆星：太陽（tier 10）互撞＝黑洞
+    expect(nextTier(SUN_TIER, SUN_TIER)).toBeNull()
+    // 已發現一顆恆星：太陽互撞改為合成 tier 11，換 tier 11 互撞＝黑洞
+    expect(nextTier(SUN_TIER, SUN_TIER + 1)).toBe(SUN_TIER + 1)
+    expect(nextTier(SUN_TIER + 1, SUN_TIER + 1)).toBeNull()
   })
 })
 

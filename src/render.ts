@@ -27,7 +27,7 @@ function wobblyCirclePath(g: CanvasRenderingContext2D, r: number, seed: number) 
 
 /* ══════════════ 背景：繪本夜空 ══════════════ */
 
-interface Star {
+export interface Star {
   x: number
   y: number
   r: number
@@ -205,52 +205,226 @@ export function drawDangerVignette(g: CanvasRenderingContext2D, time: number, in
   g.fillRect(0, 0, BOARD.width, BOARD.loseY * 1.6)
 }
 
-/* ══════════════ 黑洞（雙太陽相撞後吞噬全場） ══════════════ */
+/* ══════════════ 黑洞（頂階恆星相撞後吞噬全場） ══════════════ */
 
 /**
- * 黑洞吞噬動畫：事件視界隨 progress（0→1）長大，吸積盤高速旋轉。
- * 純視覺——實際「吸入」判定與移除在 game.ts 的物理更新處理。
+ * 黑洞過場的三段時間軸（秒）：
+ *  0        → form      塌陷形成：視界彈出、吸積盤起轉
+ *  form     → devourEnd 吞噬全場：暗幕籠罩、星光被拉成弧、集中線＋螺旋吸積流
+ *  devourEnd→ total     終幕塌縮：黑洞縮回奇點、白閃、新恆星誕生
+ * game.ts 的物理吞噬判定沿用同一組時間點。
  */
-export function drawBlackHole(g: CanvasRenderingContext2D, x: number, y: number, progress: number, time: number) {
-  const r = 24 + progress * 100
+export const BH_PHASE = { form: 0.55, devourEnd: 1.95, total: 2.7 } as const
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+const easeInCubic = (t: number) => t * t * t
+
+/** 黑洞各階段進度（0~1），視覺與物理共用同一套解算 */
+export function bhProgress(t: number) {
+  return {
+    form: clamp01(t / BH_PHASE.form),
+    devour: clamp01((t - BH_PHASE.form) / (BH_PHASE.devourEnd - BH_PHASE.form)),
+    finale: clamp01((t - BH_PHASE.devourEnd) / (BH_PHASE.total - BH_PHASE.devourEnd)),
+  }
+}
+
+/**
+ * 全視窗黑洞吞噬：暗幕、重力透鏡星弧、漫畫集中線、螺旋吸積流、
+ * 三環吸積盤＋光子環、手繪抖動邊線的事件視界。
+ * 疊放於星球之後、粒子之前；終幕白閃見 drawSupernovaFlash（疊在最上層）。
+ */
+export function drawBlackHole(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  t: number,
+  time: number,
+  stars: Star[] = [],
+) {
+  const { form, devour, finale } = bhProgress(t)
+  // 視界半徑：形成期彈出 → 吞噬期緩漲 → 終幕塌縮回奇點
+  const rGrow = 30 * easeOutCubic(form) + 78 * easeOutCubic(devour)
+  const r = Math.max(2, rGrow * (1 - easeInCubic(finale)))
+  const intensity = Math.min(1, form * 0.6 + devour) * (1 - finale * finale)
+  // 從黑洞中心到最遠角落的距離：暗幕與集中線要真正蓋滿全場
+  const maxDist = Math.max(
+    Math.hypot(x, y),
+    Math.hypot(BOARD.width - x, y),
+    Math.hypot(x, BOARD.height - y),
+    Math.hypot(BOARD.width - x, BOARD.height - y),
+  )
+
+  // ── 1. 全畫面暗幕：邊緣最暗（世界的光被偷走），中心留給吸積盤的亮 ──
+  const dark = 0.92 * intensity
+  const veil = g.createRadialGradient(x, y, r * 1.4, x, y, maxDist)
+  veil.addColorStop(0, `rgba(10, 6, 18, ${0.5 * dark})`)
+  veil.addColorStop(0.6, `rgba(10, 6, 18, ${0.8 * dark})`)
+  veil.addColorStop(1, `rgba(6, 3, 12, ${dark})`)
+  g.fillStyle = veil
+  g.fillRect(0, 0, BOARD.width, BOARD.height)
+
+  // ── 2. 重力透鏡：背景星光被拉成繞行黑洞的弧線、緩緩被吸近 ──
+  if (devour > 0.02) {
+    g.save()
+    g.lineCap = 'round'
+    for (const s of stars) {
+      const dx = s.x - x
+      const dy = s.y - y
+      const dist = Math.hypot(dx, dy)
+      if (dist < r * 1.8) continue
+      const ang = Math.atan2(dy, dx)
+      const pulled = dist * (1 - 0.38 * easeOutCubic(devour))
+      const sweep = devour * Math.min(1.1, 0.15 + 130 / dist)
+      const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(time * s.speed + s.phase))
+      g.strokeStyle = `rgba(246, 234, 201, ${(0.55 * devour * (1 - finale) * tw).toFixed(3)})`
+      g.lineWidth = Math.max(1.2, s.r * 0.8)
+      g.beginPath()
+      g.arc(x, y, pulled, ang - sweep / 2, ang + sweep / 2)
+      g.stroke()
+    }
+    g.restore()
+  }
+
+  // ── 3. 漫畫集中線：從畫面外緣射向黑洞、長短隨時間閃爍 ──
+  if (form > 0.5) {
+    const lineA = Math.min(1, (form - 0.5) * 2) * (1 - finale)
+    g.save()
+    g.lineCap = 'round'
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2 + Math.sin(i * 13.7) * 0.11
+      const flick = 0.5 + 0.5 * Math.sin(time * 19 + i * 5.3)
+      const outer = maxDist + 30
+      const inner = r * 2.4 + (outer - r * 2.4) * (0.45 + 0.35 * flick)
+      g.strokeStyle = `rgba(246, 234, 201, ${(lineA * (0.08 + 0.12 * flick)).toFixed(3)})`
+      g.lineWidth = 2.5
+      g.beginPath()
+      g.moveTo(x + Math.cos(a) * outer, y + Math.sin(a) * outer)
+      g.lineTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner)
+      g.stroke()
+    }
+    g.restore()
+  }
+
+  // ── 4. 螺旋吸積流：三條發光虛線臂向內捲、dash 流動＝物質被抽進去 ──
+  if (devour > 0.02 && finale < 0.6) {
+    g.save()
+    g.translate(x, y)
+    g.globalCompositeOperation = 'lighter'
+    g.lineCap = 'round'
+    g.setLineDash([13, 11])
+    g.lineDashOffset = -time * 170 // 虛線往洞裡流
+    const armA = 0.4 * devour * (1 - finale)
+    const rOuter = maxDist * (0.55 + 0.45 * devour)
+    for (let i = 0; i < 3; i++) {
+      const phase = time * 2.6 + (i * Math.PI * 2) / 3
+      g.strokeStyle = `rgba(255, 201, 110, ${armA.toFixed(3)})`
+      g.lineWidth = 3.5
+      g.beginPath()
+      const N = 26
+      for (let k = 0; k <= N; k++) {
+        const s = k / N // 0=外緣 → 1=洞口
+        const rad = r * 1.25 + (rOuter - r * 1.25) * Math.pow(1 - s, 1.7)
+        const ang = phase + s * 5.4
+        const px = Math.cos(ang) * rad
+        const py = Math.sin(ang) * rad
+        if (k === 0) g.moveTo(px, py)
+        else g.lineTo(px, py)
+      }
+      g.stroke()
+    }
+    g.setLineDash([])
+    g.restore()
+  }
+
   g.save()
   g.translate(x, y)
 
-  // 吸積盤：兩圈手繪橢圓光環，反向高速旋轉
-  for (let i = 0; i < 2; i++) {
+  // ── 5. 洞口熾熱光暈：吸積物質摩擦發光，隨吞噬加劇脈動 ──
+  const pulse = 0.8 + 0.2 * Math.sin(time * 11)
+  const heat = g.createRadialGradient(0, 0, r * 0.9, 0, 0, r * 2.8)
+  heat.addColorStop(0, `rgba(255, 190, 100, ${(0.4 * intensity * pulse).toFixed(3)})`)
+  heat.addColorStop(0.55, `rgba(255, 150, 70, ${(0.16 * intensity * pulse).toFixed(3)})`)
+  heat.addColorStop(1, 'rgba(255, 150, 70, 0)')
+  g.fillStyle = heat
+  g.beginPath()
+  g.arc(0, 0, r * 2.8, 0, Math.PI * 2)
+  g.fill()
+
+  // ── 6. 吸積盤：三圈傾斜橢圓、交錯反轉、都卜勒亮側（一半亮一半暗） ──
+  for (let i = 0; i < 3; i++) {
     g.save()
-    g.rotate(time * (i === 0 ? 3.4 : -2.6) + i * 1.3)
-    const ringR = r * (1.6 + i * 0.5)
+    const dir = i % 2 === 0 ? 1 : -1
+    g.rotate(time * dir * (3.8 - i * 0.9) + i * 1.3)
+    const ringR = r * (1.55 + i * 0.42)
     const grad = g.createLinearGradient(-ringR, 0, ringR, 0)
     grad.addColorStop(0, 'rgba(255, 201, 110, 0)')
-    grad.addColorStop(0.5, `rgba(255, 201, 110, ${0.55 - i * 0.15})`)
+    grad.addColorStop(0.5, `rgba(255, 214, 130, ${(0.6 - i * 0.14) * intensity})`)
     grad.addColorStop(1, 'rgba(255, 201, 110, 0)')
     g.strokeStyle = grad
-    g.lineWidth = 6 - i * 2
+    g.lineWidth = 6.5 - i * 1.6
     g.beginPath()
-    g.ellipse(0, 0, ringR, ringR * 0.32, 0, 0, Math.PI * 2)
+    g.ellipse(0, 0, ringR, ringR * (0.3 + i * 0.05), 0, 0, Math.PI * 2)
+    g.stroke()
+    // 都卜勒亮側：朝向我們旋來的那半段加一道熾白
+    g.strokeStyle = `rgba(255, 244, 220, ${(0.5 - i * 0.12) * intensity})`
+    g.lineWidth = 2.5 - i * 0.5
+    g.beginPath()
+    g.ellipse(0, 0, ringR, ringR * (0.3 + i * 0.05), 0, Math.PI * 0.15, Math.PI * 0.85)
     g.stroke()
     g.restore()
   }
 
-  // 事件視界：純黑圓 + 邊緣暖光暈
-  const glow = g.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 1.35)
-  glow.addColorStop(0, 'rgba(20, 12, 28, 1)')
-  glow.addColorStop(0.75, 'rgba(20, 12, 28, 0.95)')
-  glow.addColorStop(1, 'rgba(255, 210, 140, 0)')
-  g.fillStyle = glow
-  g.beginPath()
-  g.arc(0, 0, r * 1.35, 0, Math.PI * 2)
-  g.fill()
-
-  g.fillStyle = '#120A16'
-  g.beginPath()
-  g.arc(0, 0, r, 0, Math.PI * 2)
-  g.fill()
-  g.strokeStyle = 'rgba(255, 219, 158, 0.85)'
-  g.lineWidth = 2.5
+  // ── 7. 光子環：貼著視界的一圈熾白細環（手繪抖動邊線） ──
+  g.strokeStyle = `rgba(255, 246, 224, ${(0.85 * intensity).toFixed(3)})`
+  g.lineWidth = 2
+  wobblyCirclePath(g, r * 1.14, 7.3)
   g.stroke()
 
+  // ── 8. 事件視界：手繪抖動純黑圓、暖色鑲邊 + 一絲藍紫色像差 ──
+  g.fillStyle = '#0B0611'
+  wobblyCirclePath(g, r, 9.1)
+  g.fill()
+  g.strokeStyle = `rgba(255, 190, 120, ${(0.9 * intensity).toFixed(3)})`
+  g.lineWidth = 3
+  g.stroke()
+  g.strokeStyle = `rgba(150, 180, 255, ${(0.35 * intensity).toFixed(3)})`
+  g.lineWidth = 1.5
+  wobblyCirclePath(g, r * 1.07, 4.7)
+  g.stroke()
+
+  g.restore()
+}
+
+/**
+ * 終幕白閃＋衝擊波環：黑洞塌縮回奇點的瞬間整個畫面炸亮，
+ * 疊在粒子之上（game.draw 最後呼叫），亮完新恆星誕生。
+ */
+export function drawSupernovaFlash(g: CanvasRenderingContext2D, x: number, y: number, t: number) {
+  const { finale } = bhProgress(t)
+  if (finale <= 0) return
+  const flashA = finale < 0.22 ? finale / 0.22 : Math.max(0, (1 - finale) / 0.78)
+  const grad = g.createRadialGradient(x, y, 0, x, y, BOARD.height)
+  grad.addColorStop(0, `rgba(255, 248, 228, ${(0.95 * flashA).toFixed(3)})`)
+  grad.addColorStop(0.55, `rgba(255, 226, 170, ${(0.75 * flashA).toFixed(3)})`)
+  grad.addColorStop(1, `rgba(255, 200, 130, ${(0.5 * flashA).toFixed(3)})`)
+  g.fillStyle = grad
+  g.fillRect(0, 0, BOARD.width, BOARD.height)
+  // 兩圈手繪墨線衝擊波向外擴
+  g.save()
+  g.lineCap = 'round'
+  for (const [speed, lw] of [
+    [720, 5],
+    [520, 3],
+  ] as const) {
+    g.strokeStyle = `rgba(246, 234, 201, ${(0.8 * (1 - finale)).toFixed(3)})`
+    g.lineWidth = lw
+    g.setLineDash([16, 12])
+    g.beginPath()
+    g.arc(x, y, 8 + finale * speed, 0, Math.PI * 2)
+    g.stroke()
+  }
+  g.setLineDash([])
   g.restore()
 }
 
@@ -388,6 +562,16 @@ function paintSurface(g: CanvasRenderingContext2D, tier: PlanetTier, r: number) 
         { y: 0.35, h: 0.45, color: '#E0A93E', alpha: 0.35 },
       ])
       break
+    default: {
+      // 系外恆星（11+）：恆星斑（米粒組織）散佈，位置由階級決定、每顆不同
+      const spots: Array<[number, number, number]> = []
+      for (let i = 0; i < 4; i++) {
+        const a = tier.tier * 2.4 + i * 1.7
+        spots.push([Math.sin(a) * 0.45, Math.cos(a * 1.3) * 0.45, 0.09 + 0.05 * (0.5 + 0.5 * Math.sin(a * 2.1))])
+      }
+      paintCraters(g, r, tier.edge, spots)
+      break
+    }
   }
 }
 

@@ -27,6 +27,8 @@ const I = {
   medal: '<svg viewBox="0 0 24 24"><path d="M9 3l2.2 6M15 3l-2.2 6"/><circle cx="12" cy="15" r="5" fill="var(--honey)"/><path d="M12 12.5l.8 1.6 1.8.3-1.3 1.3.3 1.8-1.6-.85-1.6.85.3-1.8-1.3-1.3 1.8-.3z" fill="var(--ink)" stroke="none"/></svg>',
   merge: '<svg viewBox="0 0 24 24"><circle cx="9.5" cy="12" r="5.4" fill="none"/><circle cx="14.5" cy="12" r="5.4" fill="var(--honey)"/></svg>',
   chain: '<svg viewBox="0 0 24 24"><rect x="2.5" y="9" width="12" height="6" rx="3" fill="none"/><rect x="9.5" y="9" width="12" height="6" rx="3" fill="var(--honey)"/></svg>',
+  telescope: '<svg viewBox="0 0 24 24"><path d="M3.5 9.5 15 4l2.4 5-11.5 5.5z" fill="var(--honey)"/><path d="M16.2 3.6l2.6 5.4"/><path d="M10 14.5l-2.2 6M12.6 14l2.6 6.5"/></svg>',
+  north: '<svg viewBox="0 0 24 24"><path d="M12 2l2 8 8 2-8 2-2 8-2-8-8-2 8-2z" fill="var(--honey)"/><circle cx="12" cy="12" r="1.6" fill="var(--ink)" stroke="none"/></svg>',
 }
 
 /** 由小到大排列，方便在面板呈現進度感 */
@@ -35,6 +37,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'saturn', icon: I.saturn, name: 'Ringbearer', desc: 'Merge up to Saturn', test: s => s.maxTier >= 8 },
   { id: 'sun', icon: I.sun, name: 'Star Birth', desc: 'Create the Sun', test: s => s.maxTier >= 10 },
   { id: 'supernova', icon: I.nova, name: 'Supernova', desc: 'Collide two Suns', test: s => s.supernovas >= 1 },
+  { id: 'discover1', icon: I.telescope, name: 'New Horizons', desc: 'Discover a star beyond the Sun', test: s => s.maxTier >= 11 },
+  { id: 'polaris', icon: I.north, name: 'True North', desc: 'Discover Polaris, the final star', test: s => s.maxTier >= 18 },
   { id: 'combo3', icon: I.bolt, name: 'Chain x3', desc: 'Hit a ×3 combo', test: s => s.bestCombo >= 3 },
   { id: 'combo5', icon: I.flame, name: 'Chain x5', desc: 'Hit a ×5 combo', test: s => s.bestCombo >= 5 },
   { id: 'combo8', icon: I.burst, name: 'Chain Master', desc: 'Hit the max ×8 combo', test: s => s.bestCombo >= 8 },

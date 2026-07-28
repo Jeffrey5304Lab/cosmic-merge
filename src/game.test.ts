@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { Game, type GameCallbacks } from './game'
 import { mulberry32, SUPERNOVA_SCORE } from './logic'
-import { BOARD, MAX_TIER, TIERS } from './planets'
+import { BOARD, MAX_TIER, SUN_TIER, TIERS } from './planets'
+import { resetDiscovery } from './discovery'
 
 /** 無頭模擬：固定步長推進物理 + 定時投放 */
 function makeGame(rng?: () => number) {
@@ -109,9 +110,11 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(events.gameOver).toBe(2)
   })
 
-  it('超新星：兩顆太陽相撞雙雙消失、得大分、觸發 onSupernova 而非 onMerge', () => {
+  it('超新星：兩顆太陽相撞湮滅、得大分、觸發 onSupernova/onDiscover 並誕生新恆星', () => {
+    resetDiscovery(0)
     let supernovas = 0
     let merges = 0
+    let discovered: number | null = null
     let lastScore = 0
     const cb: GameCallbacks = {
       onScore(score) {
@@ -125,27 +128,33 @@ describe('Game 整合（無頭物理模擬）', () => {
       onSupernova() {
         supernovas++
       },
+      onDiscover(tier) {
+        discovered = tier
+      },
       onGameOver() {},
     }
     const game = new Game(cb)
     // 刻意讓兩顆太陽中心距離小於半徑和，確保一定交疊碰撞（不依賴板寬/半徑的絕對數值）
-    const r = TIERS[MAX_TIER].radius
+    const r = TIERS[SUN_TIER].radius
     const y = BOARD.height - r - 4
-    game.debugSpawn(MAX_TIER, BOARD.width / 2 - r / 4, y)
-    game.debugSpawn(MAX_TIER, BOARD.width / 2 + r / 4, y)
+    game.debugSpawn(SUN_TIER, BOARD.width / 2 - r / 4, y)
+    game.debugSpawn(SUN_TIER, BOARD.width / 2 + r / 4, y)
     expect(game.bodyCount).toBe(2)
-    simulate(game, 2)
-    expect(game.bodyCount).toBe(0) // 雙雙湮滅，沒有生出新星球
+    simulate(game, 3.5) // 黑洞過場總長 2.7 秒（BH_PHASE.total），跑到結算之後
+    expect(game.bodyCount).toBe(1) // 兩顆太陽湮滅，黑洞原地誕生新發現的恆星
+    expect(discovered).toBe(SUN_TIER + 1) // 第一顆系外恆星：Proxima
     expect(supernovas).toBe(1)
-    expect(merges).toBe(0) // 超新星不算合成（避免太陽數重複計）
+    expect(merges).toBe(0) // 超新星不算合成（避免恆星數重複計）
     expect(lastScore).toBeGreaterThanOrEqual(SUPERNOVA_SCORE)
     expect(game.score).toBe(lastScore)
     // 之後照常能玩，物理沒有壞掉
     simulate(game, 4, 0.5)
     expect(game.state).not.toBe('over')
+    resetDiscovery(0)
   })
 
   it('黑洞：兩顆太陽相撞後吞掉場上其他星球，加分算進被吞的星球', () => {
+    resetDiscovery(0)
     let supernovas = 0
     let lastScore = 0
     const cb: GameCallbacks = {
@@ -160,20 +169,77 @@ describe('Game 整合（無頭物理模擬）', () => {
       onGameOver() {},
     }
     const game = new Game(cb)
-    const r = TIERS[MAX_TIER].radius
+    const r = TIERS[SUN_TIER].radius
     const y = BOARD.height - r - 4
-    game.debugSpawn(MAX_TIER, BOARD.width / 2 - r / 4, y)
-    game.debugSpawn(MAX_TIER, BOARD.width / 2 + r / 4, y)
+    game.debugSpawn(SUN_TIER, BOARD.width / 2 - r / 4, y)
+    game.debugSpawn(SUN_TIER, BOARD.width / 2 + r / 4, y)
     // 場上另外擺幾顆無關的小星球，應該一起被黑洞吞掉、分數跟著吞噬量走
     game.debugSpawn(2, 40, 40)
     game.debugSpawn(3, BOARD.width - 40, 40)
     expect(game.bodyCount).toBe(4)
-    simulate(game, 2.5)
-    expect(game.bodyCount).toBe(0) // 全場清空，不只兩顆太陽
+    simulate(game, 3.5)
+    expect(game.bodyCount).toBe(1) // 全場清空（只剩黑洞後誕生的新恆星）
     expect(supernovas).toBe(1)
     // 66（太陽合成分）+ 3（tier2）+ 6（tier3）＝至少 75 才對得起被吞掉的星球
     expect(lastScore).toBeGreaterThan(SUPERNOVA_SCORE)
     expect(game.state).not.toBe('over')
+    resetDiscovery(0)
+  })
+
+  it('已發現恆星後：太陽相撞合成新恆星（一般合成），不再立刻變黑洞', () => {
+    resetDiscovery(1) // 已發現 Proxima
+    let supernovas = 0
+    let mergedTier = -1
+    const cb: GameCallbacks = {
+      onScore() {},
+      onNext() {},
+      onCombo() {},
+      onMerge(tier) {
+        mergedTier = tier
+      },
+      onSupernova() {
+        supernovas++
+      },
+      onGameOver() {},
+    }
+    const game = new Game(cb)
+    const r = TIERS[SUN_TIER].radius
+    const y = BOARD.height - r - 4
+    game.debugSpawn(SUN_TIER, BOARD.width / 2 - r / 4, y)
+    game.debugSpawn(SUN_TIER, BOARD.width / 2 + r / 4, y)
+    simulate(game, 2)
+    expect(game.bodyCount).toBe(1) // 合成出一顆 Proxima
+    expect(mergedTier).toBe(SUN_TIER + 1)
+    expect(supernovas).toBe(0) // 要 Proxima+Proxima 才會塌陷成黑洞
+    resetDiscovery(0)
+  })
+
+  it('頂階恆星（全部發現完）相撞仍塌陷成黑洞，但不再發現新恆星', () => {
+    resetDiscovery(MAX_TIER - SUN_TIER) // 全部發現完
+    let supernovas = 0
+    let discovers = 0
+    const cb: GameCallbacks = {
+      onScore() {},
+      onNext() {},
+      onCombo() {},
+      onSupernova() {
+        supernovas++
+      },
+      onDiscover() {
+        discovers++
+      },
+      onGameOver() {},
+    }
+    const game = new Game(cb)
+    const r = TIERS[MAX_TIER].radius
+    const y = BOARD.height - r - 4
+    game.debugSpawn(MAX_TIER, BOARD.width / 2 - r / 4, y)
+    game.debugSpawn(MAX_TIER, BOARD.width / 2 + r / 4, y)
+    simulate(game, 3.5)
+    expect(game.bodyCount).toBe(0) // 沒有新恆星可發現：場上淨空
+    expect(supernovas).toBe(1)
+    expect(discovers).toBe(0)
+    resetDiscovery(0)
   })
 
   it('小錘子 smash：敲掉一顆星球', () => {

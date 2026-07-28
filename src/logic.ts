@@ -35,9 +35,13 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-/** 兩顆同階星球合體後的階級；已達最高階回傳 null（太陽不再合成） */
-export function nextTier(tier: number): number | null {
-  return tier >= MAX_TIER ? null : tier + 1
+/**
+ * 兩顆同階星球合體後的階級。
+ * topUnlocked＝目前可合成到的最高階（太陽＋已發現恆星數，見 discovery.ts）；
+ * 撞到這一階回傳 null → 塌陷成黑洞、吞噬全場、發現下一顆恆星。
+ */
+export function nextTier(tier: number, topUnlocked: number = MAX_TIER): number | null {
+  return tier >= topUnlocked ? null : tier + 1
 }
 
 /** 連鎖計分：時間窗內連續合成，倍率遞增（1x → 2x → 3x …，上限 8x） */

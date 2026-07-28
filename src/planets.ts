@@ -1,4 +1,4 @@
-/** 星球階級設定：從隕石一路合到太陽，共 11 級 */
+/** 星球階級設定：從隕石合到太陽（0-10），再往上是黑洞後陸續「發現」的系外恆星（11-18） */
 export interface PlanetTier {
   /** 階級索引 0-10 */
   tier: number
@@ -28,9 +28,21 @@ export const TIERS: PlanetTier[] = [
   { tier: 8,  name: 'Saturn',  emoji: '🪐', radius: 87,  color: '#E3B264', edge: '#BB8A3C', ring: true },
   { tier: 9,  name: 'Jupiter', emoji: '🟠', radius: 95,  color: '#E09F69', edge: '#B97742' },
   { tier: 10, name: 'Sun',     emoji: '☀️', radius: 100, color: '#F3CB57', edge: '#D9A431', glow: true },
+  // ── 系外恆星（黑洞吞噬後逐顆發現，跨局永久保存；見 discovery.ts） ──
+  { tier: 11, name: 'Proxima',    emoji: '🔴', radius: 102, color: '#E0705A', edge: '#B54C38', glow: true },
+  { tier: 12, name: 'Sirius',     emoji: '⚪', radius: 104, color: '#DCE8F2', edge: '#A9C1D8', glow: true },
+  { tier: 13, name: 'Vega',       emoji: '🔵', radius: 106, color: '#B7CBEF', edge: '#8199CC', glow: true },
+  { tier: 14, name: 'Arcturus',   emoji: '🟠', radius: 108, color: '#EFA75A', edge: '#C67F35', glow: true },
+  { tier: 15, name: 'Rigel',      emoji: '💠', radius: 110, color: '#8FA8E8', edge: '#6379BE', glow: true },
+  { tier: 16, name: 'Betelgeuse', emoji: '🌡️', radius: 112, color: '#D95B43', edge: '#A93E2C', glow: true },
+  { tier: 17, name: 'Deneb',      emoji: '🤍', radius: 114, color: '#C9D6F2', edge: '#93A8D4', glow: true },
+  { tier: 18, name: 'Polaris',    emoji: '🌟', radius: 116, color: '#F2E6C4', edge: '#CBB98F', glow: true },
 ]
 
 export const MAX_TIER = TIERS.length - 1
+
+/** 太陽的階級：0-10 是「行星進化鏈」的終點，11 以上是系外恆星 */
+export const SUN_TIER = 10
 
 /** 玩家可投放的最大階級（同西瓜遊戲只掉小果） */
 export const DROPPABLE_TIERS = 5

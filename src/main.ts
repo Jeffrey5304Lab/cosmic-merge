@@ -1,13 +1,14 @@
 import './style.css'
 import { Game } from './game'
-import { BOARD, TIERS } from './planets'
+import { BOARD, SUN_TIER, TIERS } from './planets'
+import { discoveredCount } from './discovery'
 import { drawPlanet } from './render'
 import { isMuted, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
-import { loadStats, recordCombo, recordGame, recordMerge, recordSupernova, undoGameCount } from './stats'
+import { loadStats, recordCombo, recordDiscovery, recordGame, recordMerge, recordSupernova, undoGameCount } from './stats'
 import { ACHIEVEMENTS, evaluateAchievements, loadUnlocked } from './achievements'
 import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
@@ -126,6 +127,18 @@ function renderBestMerge(tier: number) {
   const scale = Math.min(1, 44 / def.radius)
   drawPlanet(g, def, 60, 60, 0, scale)
   bestMergeNameEl.textContent = planetName(tier)
+}
+
+/* ── 發現新恆星橫幅 ── */
+const discoverEl = $<HTMLDivElement>('discover')
+let discoverTimer = 0
+function showDiscoverBanner(name: string) {
+  discoverEl.textContent = STR.newStarBanner(name)
+  discoverEl.classList.remove('show')
+  void discoverEl.offsetWidth // 重新觸發動畫
+  discoverEl.classList.add('show')
+  clearTimeout(discoverTimer)
+  discoverTimer = window.setTimeout(() => discoverEl.classList.remove('show'), 3200)
 }
 
 /* ── Combo 提示 ── */
@@ -281,7 +294,7 @@ function renderGameOver() {
   const name = planetName(maxTier)
   overTitleEl.textContent = STR.overTitle
   overScoreEl.innerHTML = STR.overScore(score)
-  overEmojiEl.textContent = maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
+  overEmojiEl.textContent = maxTier >= 11 ? '🌟' : maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
   const sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
   overSubEl.textContent = sub
   if (REMOTE_ENABLED) {
@@ -323,6 +336,12 @@ const game = new Game({
     recordSupernova()
     recordCombo(multiplier)
     checkAchievements()
+  },
+  onDiscover(tier) {
+    recordDiscovery(tier)
+    checkAchievements()
+    setChartMode('stars', true) // 自動切到恆星圖鑑點亮新發現，幾秒後切回
+    showDiscoverBanner(planetName(tier))
   },
   onGameOver(score, best, maxTier) {
     recordGame(score, maxTier)
@@ -411,6 +430,48 @@ function exitSmashMode() {
   smashMode = false
   hammerBtn.classList.remove('armed')
   hintEl.classList.add('hidden')
+  // hidden 只有 opacity:0：一併拿掉 clickable，避免看不見的提示框擋住點擊
+  hintEl.classList.remove('clickable')
+}
+
+/* ── 錘子提示：第一次顯示完整說明，之後只給迷你圖示、需要時點擊展開 ── */
+const HAMMER_HINT_KEY = 'cosmic-merge:hammer-hint-seen'
+
+function hammerHintSeen(): boolean {
+  try {
+    return !!localStorage.getItem(HAMMER_HINT_KEY)
+  } catch {
+    return false
+  }
+}
+
+function showHammerHint() {
+  hintEl.classList.remove('hidden')
+  if (hammerHintSeen()) {
+    hintTextEl.textContent = STR.hammerHintMini
+    hintEl.classList.add('mini', 'clickable')
+    return
+  }
+  hintTextEl.textContent = STR.hammerHint
+  hintEl.classList.remove('mini', 'clickable')
+  try {
+    localStorage.setItem(HAMMER_HINT_KEY, '1')
+  } catch {
+    /* 私密模式忽略 */
+  }
+}
+
+// 迷你提示點一下展開完整說明（僅本次進入敲擊模式生效）
+hintEl.addEventListener('click', () => {
+  if (!hintEl.classList.contains('mini')) return
+  hintTextEl.textContent = STR.hammerHint
+  hintEl.classList.remove('mini', 'clickable')
+})
+
+function enterSmashMode() {
+  smashMode = true
+  hammerBtn.classList.add('armed')
+  showHammerHint()
 }
 
 hammerBtn.addEventListener('click', async () => {
@@ -420,10 +481,7 @@ hammerBtn.addEventListener('click', async () => {
     return
   }
   if (getHammers() > 0) {
-    smashMode = true
-    hammerBtn.classList.add('armed')
-    hintTextEl.textContent = STR.hammerHint
-    hintEl.classList.remove('hidden')
+    enterSmashMode()
     return
   }
   // 沒庫存：兌現一支（v1 直接給；接真實廣告後＝看完才給），並直接進入敲擊模式
@@ -433,10 +491,7 @@ hammerBtn.addEventListener('click', async () => {
   if (watched) {
     addHammer()
     refreshHammerCount()
-    smashMode = true
-    hammerBtn.classList.add('armed')
-    hintTextEl.textContent = STR.hammerHint
-    hintEl.classList.remove('hidden')
+    enterSmashMode()
   }
 })
 
@@ -511,7 +566,8 @@ function applyStrings() {
   $('label-best').textContent = STR.best
   $('label-next').textContent = STR.next
   $('label-bestmerge').textContent = STR.bestMerge
-  $('label-evolution').textContent = STR.evolution
+  tabEvolutionBtn.textContent = STR.evolution
+  tabStarsBtn.textContent = STR.starsTab
   shareBtn.textContent = STR.share
   $<HTMLButtonElement>('restart').textContent = STR.restart
   muteBtn.setAttribute('aria-label', STR.mute)
@@ -583,22 +639,70 @@ window.addEventListener('keydown', e => {
   }
 })
 
-/* ── 進化圖鑑 ── */
+/* ── 底部圖鑑：同一列在「行星進化」與「恆星發現」間切換（不多佔畫面空間） ── */
+const tabEvolutionBtn = $<HTMLButtonElement>('tab-evolution')
+const tabStarsBtn = $<HTMLButtonElement>('tab-stars')
+let chartMode: 'evolution' | 'stars' = 'evolution'
+let chartRevertTimer = 0
+
 function renderChart() {
   const chart = $<HTMLCanvasElement>('chart')
   const g = chart.getContext('2d')
   if (!g) return
   g.clearRect(0, 0, chart.width, chart.height)
-  const w = chart.width / TIERS.length
-  TIERS.forEach((def, i) => {
-    const scale = Math.min(1, (10 + i * 1.6) / def.radius)
-    drawPlanet(g, def, w * i + w / 2, 30, 0, scale)
-    g.fillStyle = '#6B5844'
-    g.font = "bold 10px system-ui, sans-serif"
-    g.textAlign = 'center'
-    g.fillText(planetName(i), w * i + w / 2, 64)
-  })
+  g.textAlign = 'center'
+  if (chartMode === 'evolution') {
+    // 行星進化鏈：隕石 → 太陽（固定 11 顆）
+    const planets = TIERS.slice(0, SUN_TIER + 1)
+    const w = chart.width / planets.length
+    planets.forEach((def, i) => {
+      const scale = Math.min(1, (10 + i * 1.6) / def.radius)
+      drawPlanet(g, def, w * i + w / 2, 30, 0, scale)
+      g.fillStyle = '#6B5844'
+      g.font = "bold 10px system-ui, sans-serif"
+      g.fillText(planetName(i), w * i + w / 2, 64)
+    })
+    return
+  }
+  // 恆星發現鏈：太陽 + 系外恆星；未發現的是黑影＋?（吊玩家胃口）
+  const cells = TIERS.length - SUN_TIER
+  const w = chart.width / cells
+  const top = SUN_TIER + discoveredCount()
+  for (let t = SUN_TIER; t < TIERS.length; t++) {
+    const def = TIERS[t]
+    const cx = w * (t - SUN_TIER) + w / 2
+    if (t <= top) {
+      drawPlanet(g, def, cx, 28, 0, Math.min(1, 20 / def.radius))
+      g.fillStyle = '#6B5844'
+      g.font = 'bold 10px system-ui, sans-serif'
+      g.fillText(planetName(t), cx, 64)
+    } else {
+      g.fillStyle = 'rgba(59, 48, 36, 0.35)'
+      g.beginPath()
+      g.arc(cx, 28, 18, 0, Math.PI * 2)
+      g.fill()
+      g.fillStyle = 'rgba(244, 233, 215, 0.85)'
+      g.font = 'bold 18px system-ui, sans-serif'
+      g.fillText('?', cx, 34)
+      g.fillStyle = '#6B5844'
+      g.font = 'bold 10px system-ui, sans-serif'
+      g.fillText('???', cx, 64)
+    }
+  }
 }
+
+function setChartMode(mode: 'evolution' | 'stars', autoRevert = false) {
+  chartMode = mode
+  clearTimeout(chartRevertTimer)
+  tabEvolutionBtn.classList.toggle('active', mode === 'evolution')
+  tabStarsBtn.classList.toggle('active', mode === 'stars')
+  renderChart()
+  // 發現新恆星時自動切到 STARS 展示幾秒，再切回進化鏈
+  if (autoRevert) chartRevertTimer = window.setTimeout(() => setChartMode('evolution'), 5000)
+}
+
+tabEvolutionBtn.addEventListener('click', () => setChartMode('evolution'))
+tabStarsBtn.addEventListener('click', () => setChartMode('stars'))
 
 applyStrings()
 
@@ -821,6 +925,9 @@ function checkAchievements() {
   }
   pumpToasts()
 }
+
+/* ── 開發模式：掛上 window 方便在 console 觸發黑洞等事件（正式包不含） ── */
+if (import.meta.env.DEV) (window as unknown as { game?: Game }).game = game
 
 /* ── 主迴圈 ── */
 let last = performance.now()
