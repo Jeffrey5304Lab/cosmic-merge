@@ -11,8 +11,16 @@ export interface PlanetTier {
   edge: string
   /** 是否有行星環（土星） */
   ring?: boolean
-  /** 是否自體發光（太陽） */
+  /** 是否自體發光（太陽＋系外恆星） */
   glow?: boolean
+  /**
+   * 恆星光冕樣式（tier 11+ 各具特色；未設定＝太陽的三角光芒）：
+   * flare=紅矮星閃焰、diffraction=相機繞射星芒、rays=放射長芒、
+   * soft=柔和藍白光暈、giant=巨星翻騰光暈、north=北極星大四芒
+   */
+  starStyle?: 'flare' | 'diffraction' | 'rays' | 'soft' | 'giant' | 'north'
+  /** 光冕/光暈色 'r, g, b'（未設定＝太陽暖橘） */
+  corona?: string
 }
 
 /** 手繪紙感配色：color = 主色塊（粉彩），edge = 紙剪陰影色 */
@@ -29,14 +37,15 @@ export const TIERS: PlanetTier[] = [
   { tier: 9,  name: 'Jupiter', emoji: '🟠', radius: 95,  color: '#E09F69', edge: '#B97742' },
   { tier: 10, name: 'Sun',     emoji: '☀️', radius: 100, color: '#F3CB57', edge: '#D9A431', glow: true },
   // ── 系外恆星（黑洞吞噬後逐顆發現，跨局永久保存；見 discovery.ts） ──
-  { tier: 11, name: 'Proxima',    emoji: '🔴', radius: 102, color: '#E0705A', edge: '#B54C38', glow: true },
-  { tier: 12, name: 'Sirius',     emoji: '⚪', radius: 104, color: '#DCE8F2', edge: '#A9C1D8', glow: true },
-  { tier: 13, name: 'Vega',       emoji: '🔵', radius: 106, color: '#B7CBEF', edge: '#8199CC', glow: true },
-  { tier: 14, name: 'Arcturus',   emoji: '🟠', radius: 108, color: '#EFA75A', edge: '#C67F35', glow: true },
-  { tier: 15, name: 'Rigel',      emoji: '💠', radius: 110, color: '#8FA8E8', edge: '#6379BE', glow: true },
-  { tier: 16, name: 'Betelgeuse', emoji: '🌡️', radius: 112, color: '#D95B43', edge: '#A93E2C', glow: true },
-  { tier: 17, name: 'Deneb',      emoji: '🤍', radius: 114, color: '#C9D6F2', edge: '#93A8D4', glow: true },
-  { tier: 18, name: 'Polaris',    emoji: '🌟', radius: 116, color: '#F2E6C4', edge: '#CBB98F', glow: true },
+  // 依真實光譜特性給各自的光冕樣式與光冕色，讓每顆恆星一眼可辨、各有帥氣個性
+  { tier: 11, name: 'Proxima',    emoji: '🔴', radius: 102, color: '#E0705A', edge: '#B54C38', glow: true, starStyle: 'flare',       corona: '236, 104, 82'  }, // 紅矮星：週期性閃焰
+  { tier: 12, name: 'Sirius',     emoji: '⚪', radius: 104, color: '#E4EEF8', edge: '#A9C1D8', glow: true, starStyle: 'diffraction', corona: '214, 232, 252' }, // 全天最亮：銳利繞射星芒
+  { tier: 13, name: 'Vega',       emoji: '🔵', radius: 106, color: '#B7CBEF', edge: '#8199CC', glow: true, starStyle: 'soft',        corona: '160, 190, 245' }, // 藍白：柔和冷光暈
+  { tier: 14, name: 'Arcturus',   emoji: '🟠', radius: 108, color: '#EFA75A', edge: '#C67F35', glow: true, starStyle: 'giant',       corona: '244, 168, 88'  }, // 橙巨星：暖色翻騰
+  { tier: 15, name: 'Rigel',      emoji: '💠', radius: 110, color: '#93ACEC', edge: '#6379BE', glow: true, starStyle: 'rays',        corona: '150, 178, 255' }, // 藍超巨星：熾烈放射長芒
+  { tier: 16, name: 'Betelgeuse', emoji: '🔻', radius: 112, color: '#D95B43', edge: '#A93E2C', glow: true, starStyle: 'giant',       corona: '224, 84, 62'   }, // 紅超巨星：巨大脈動翻騰
+  { tier: 17, name: 'Deneb',      emoji: '🤍', radius: 114, color: '#CFDBF4', edge: '#93A8D4', glow: true, starStyle: 'rays',        corona: '206, 220, 248' }, // 白超巨星：清亮放射
+  { tier: 18, name: 'Polaris',    emoji: '🌟', radius: 116, color: '#F4E7C2', edge: '#CBB98F', glow: true, starStyle: 'north',       corona: '246, 226, 152' }, // 北極星：標誌性大四芒
 ]
 
 export const MAX_TIER = TIERS.length - 1
