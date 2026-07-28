@@ -1,6 +1,8 @@
 /** 道具庫存：localStorage 持久化 */
 const KEY = 'cosmic-merge:hammers'
-const STARTING_HAMMERS = 1
+const STARTING_HAMMERS = 3
+/** 每局開局至少保底的免費錘子數（不足補到此數；多的保留）。廣告用來「想要更多」而非「才有得用」 */
+export const FREE_HAMMER_FLOOR = 3
 
 export function getHammers(): number {
   try {
@@ -32,4 +34,17 @@ export function useHammer(): number | null {
   if (n <= 0) return null
   save(n - 1)
   return n - 1
+}
+
+/**
+ * 開局保底：若庫存低於免費樓地板就補到樓地板（多的保留）。
+ * 讓每局都至少有幾支免費錘子可用，廣告只是「想要更多」的選項。
+ */
+export function refillFreeHammers(floor = FREE_HAMMER_FLOOR): number {
+  const n = getHammers()
+  if (n < floor) {
+    save(floor)
+    return floor
+  }
+  return n
 }

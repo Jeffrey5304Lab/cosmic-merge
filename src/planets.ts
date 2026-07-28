@@ -32,10 +32,10 @@ export const TIERS: PlanetTier[] = [
   { tier: 4,  name: 'Venus',   emoji: '✨', radius: 50,  color: '#F0BC8C', edge: '#CE9159' },
   { tier: 5,  name: 'Earth',   emoji: '🌍', radius: 61,  color: '#82ABD8', edge: '#5E86B5' },
   { tier: 6,  name: 'Neptune', emoji: '🔵', radius: 73,  color: '#8590CB', edge: '#5F6AA8' },
-  { tier: 7,  name: 'Uranus',  emoji: '🩵', radius: 80,  color: '#93CFD3', edge: '#62A6AC' },
-  { tier: 8,  name: 'Saturn',  emoji: '🪐', radius: 87,  color: '#E3B264', edge: '#BB8A3C', ring: true },
-  { tier: 9,  name: 'Jupiter', emoji: '🟠', radius: 95,  color: '#E09F69', edge: '#B97742' },
-  { tier: 10, name: 'Sun',     emoji: '☀️', radius: 100, color: '#F3CB57', edge: '#D9A431', glow: true },
+  { tier: 7,  name: 'Uranus',  emoji: '🩵', radius: 75,  color: '#93CFD3', edge: '#62A6AC' },
+  { tier: 8,  name: 'Saturn',  emoji: '🪐', radius: 82,  color: '#E3B264', edge: '#BB8A3C', ring: true },
+  { tier: 9,  name: 'Jupiter', emoji: '🟠', radius: 89,  color: '#E09F69', edge: '#B97742' },
+  { tier: 10, name: 'Sun',     emoji: '☀️', radius: 94,  color: '#F3CB57', edge: '#D9A431', glow: true },
   // ── 系外恆星（黑洞吞噬後逐顆發現，跨局永久保存；見 discovery.ts） ──
   // 依真實光譜特性給各自的光冕樣式與光冕色，讓每顆恆星一眼可辨、各有帥氣個性
   { tier: 11, name: 'Proxima',    emoji: '🔴', radius: 102, color: '#E0705A', edge: '#B54C38', glow: true, starStyle: 'flare',       corona: '236, 104, 82'  }, // 紅矮星：週期性閃焰
@@ -62,7 +62,7 @@ export const BOARD = {
   height: 660,
   /** 投放高度 */
   dropY: 70,
-  /** 超過此線且靜止 → 遊戲結束 */
-  loseY: 128,
+  /** 超過此線且靜止 → 遊戲結束（128→110：略拉高警戒線，給技巧玩家更多堆疊空間爬到太陽） */
+  loseY: 110,
   wallThickness: 60,
 } as const

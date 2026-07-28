@@ -13,7 +13,7 @@ import { ACHIEVEMENTS, evaluateAchievements, loadUnlocked } from './achievements
 import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
-import { addHammer, getHammers, useHammer } from './inventory'
+import { addHammer, getHammers, refillFreeHammers, useHammer } from './inventory'
 import { Capacitor } from '@capacitor/core'
 
 function $<T extends HTMLElement>(id: string): T {
@@ -425,6 +425,7 @@ let smashMode = false
 function refreshHammerCount() {
   hammerCountEl.textContent = String(getHammers())
 }
+refillFreeHammers() // 開遊戲即補到免費樓地板
 refreshHammerCount()
 
 function exitSmashMode() {
@@ -523,6 +524,8 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   lastResult = null
   lastEntry = null
   exitSmashMode()
+  refillFreeHammers() // 每局開局補到免費樓地板
+  refreshHammerCount()
   game.restart()
 })
 

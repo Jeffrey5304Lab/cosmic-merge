@@ -524,6 +524,21 @@ export class Game {
     this.spawnPlanet(tier, x, y)
   }
 
+  /** 目前投放中的星球階級（供測試模擬「聰明玩家」決策；UI 用 onNext 拿下一顆） */
+  get currentDropTier(): number {
+    return this.currentTier
+  }
+
+  /** 場上所有星球的座標與階級快照，供測試與 debug（例：模擬貪婪合成策略） */
+  get debugPlanets(): Array<{ x: number; y: number; tier: number; r: number }> {
+    const out: Array<{ x: number; y: number; tier: number; r: number }> = []
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (m) out.push({ x: body.position.x, y: body.position.y, tier: m.tier, r: TIERS[m.tier].radius })
+    }
+    return out
+  }
+
   /** 場上星球數（不含牆），供測試與 debug */
   get bodyCount(): number {
     let n = 0
