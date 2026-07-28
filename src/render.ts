@@ -988,7 +988,20 @@ export function drawPlanet(
     if (tier.starStyle) {
       drawStarCorona(g, tier, r, time)
     } else {
-      // 太陽：手繪三角光芒，緩慢呼吸（原地搖曳，不整圈旋轉）
+      // 太陽：先鋪一層暖色呼吸光暈（與系外恆星視覺一致、更有質感），再畫手繪三角光芒
+      g.save()
+      g.globalCompositeOperation = 'lighter'
+      const sunPulse = 0.9 + 0.1 * Math.sin(time * 1.6)
+      const sunHalo = g.createRadialGradient(0, 0, r * 0.7, 0, 0, r * 1.7 * sunPulse)
+      sunHalo.addColorStop(0, 'rgba(255, 210, 110, 0.4)')
+      sunHalo.addColorStop(0.5, 'rgba(255, 190, 90, 0.14)')
+      sunHalo.addColorStop(1, 'rgba(255, 190, 90, 0)')
+      g.fillStyle = sunHalo
+      g.beginPath()
+      g.arc(0, 0, r * 1.7 * sunPulse, 0, Math.PI * 2)
+      g.fill()
+      g.restore()
+      // 手繪三角光芒，緩慢呼吸（原地搖曳，不整圈旋轉）
       g.save()
       g.rotate(Math.sin(time * 0.2) * 0.12)
       g.fillStyle = 'rgba(232, 179, 60, 0.75)'
