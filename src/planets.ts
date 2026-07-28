@@ -24,10 +24,10 @@ export const TIERS: PlanetTier[] = [
   { tier: 4,  name: 'Venus',   emoji: '✨', radius: 50,  color: '#F0BC8C', edge: '#CE9159' },
   { tier: 5,  name: 'Earth',   emoji: '🌍', radius: 61,  color: '#82ABD8', edge: '#5E86B5' },
   { tier: 6,  name: 'Neptune', emoji: '🔵', radius: 73,  color: '#8590CB', edge: '#5F6AA8' },
-  { tier: 7,  name: 'Uranus',  emoji: '🩵', radius: 86,  color: '#93CFD3', edge: '#62A6AC' },
-  { tier: 8,  name: 'Saturn',  emoji: '🪐', radius: 100, color: '#E3B264', edge: '#BB8A3C', ring: true },
-  { tier: 9,  name: 'Jupiter', emoji: '🟠', radius: 116, color: '#E09F69', edge: '#B97742' },
-  { tier: 10, name: 'Sun',     emoji: '☀️', radius: 134, color: '#F3CB57', edge: '#D9A431', glow: true },
+  { tier: 7,  name: 'Uranus',  emoji: '🩵', radius: 80,  color: '#93CFD3', edge: '#62A6AC' },
+  { tier: 8,  name: 'Saturn',  emoji: '🪐', radius: 87,  color: '#E3B264', edge: '#BB8A3C', ring: true },
+  { tier: 9,  name: 'Jupiter', emoji: '🟠', radius: 95,  color: '#E09F69', edge: '#B97742' },
+  { tier: 10, name: 'Sun',     emoji: '☀️', radius: 100, color: '#F3CB57', edge: '#D9A431', glow: true },
 ]
 
 export const MAX_TIER = TIERS.length - 1

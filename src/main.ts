@@ -606,6 +606,9 @@ applyStrings()
 window.addEventListener('pointerdown', () => startMusic(), { once: true })
 window.addEventListener('keydown', () => startMusic(), { once: true })
 
+/* ── 廣告 SDK 預熱：原生 App 開場就先跳追蹤授權＋初始化，玩家第一次點復活/榔頭才不用等 ── */
+void ads.warmup?.()
+
 /* ── PWA 離線（只在正式版 Web 註冊；Capacitor 原生 App 資產為本地、不需 SW 且避免快取怪異） ── */
 if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   // 新版 SW（skipWaiting + clients.claim）接管時自動重整一次，

@@ -5,6 +5,7 @@ import { ParticleSystem } from './particles'
 import {
   drawAimLine,
   drawBackground,
+  drawBlackHole,
   drawDangerVignette,
   drawLoseLine,
   drawPlanet,
@@ -28,6 +29,20 @@ interface PlanetMeta {
 
 /** 打哈欠動畫長度（秒） */
 const YAWN_DUR = 1.4
+
+/** 黑洞吞噬事件總長度（秒）：時間到必定強制清空剩餘星球，動畫不會卡住 */
+const BLACK_HOLE_DUR = 1.1
+
+interface BlackHoleEvent {
+  x: number
+  y: number
+  /** 已進行秒數 */
+  t: number
+  /** 本次超新星的連鎖倍率（在雙太陽相撞當下就鎖定） */
+  multiplier: number
+  /** 吞掉的星球換算分數累計（用 mergeScore 換算，星球越多/越大分數越誇張） */
+  absorbed: number
+}
 
 export type GameState = 'ready' | 'playing' | 'over'
 
@@ -84,6 +99,8 @@ export class Game {
   private dangerTime = 0
   private shake = 0
   private mergeQueue: Array<{ a: Matter.Body; b: Matter.Body }> = []
+  /** 雙太陽相撞後進行中的黑洞吞噬事件；null＝目前沒有 */
+  private blackHole: BlackHoleEvent | null = null
   /** 自上次投放後玩家「懸停未投」的秒數（閒置不耐煩用） */
   private waitTime = 0
   /** 全場一致的「焦躁等待」程度 0~1（閒置太久 → 不耐煩臉），平滑處理 */
@@ -203,7 +220,7 @@ export class Game {
 
   /** 玩家投放 */
   drop() {
-    if (this.state === 'over' || this.dropCooldown > 0) return
+    if (this.state === 'over' || this.dropCooldown > 0 || this.blackHole) return
     this.state = 'playing'
     this.spawnPlanet(this.currentTier, this.aimX, BOARD.dropY)
     playDrop()
@@ -220,6 +237,7 @@ export class Game {
     Composite.clear(this.engine.world, false)
     this.buildWalls()
     this.mergeQueue = []
+    this.blackHole = null
     this.score = 0
     this.maxTierReached = 0
     this.dangerTime = 0
@@ -255,8 +273,14 @@ export class Game {
       }
       // 一次累積過多（分頁切回/長卡頓）：丟棄殘餘，避免追幀爆衝
       if (this.accumulator > step) this.accumulator = 0
-      this.processMerges()
-      this.checkGameOver(dt)
+      if (this.blackHole) {
+        // 黑洞吞噬中：場面是「過場動畫」，暫停一般合成判定與輸線判定
+        this.mergeQueue = []
+        this.updateBlackHole(dt)
+      } else {
+        this.processMerges()
+        this.checkGameOver(dt)
+      }
       // 閒置不耐煩：玩家懸停未投超過 5 秒，場上星球漸感焦躁
       if (this.state === 'playing' && this.dropCooldown === 0) this.waitTime += dt
       this.updateIdleMood(dt)
@@ -295,7 +319,7 @@ export class Game {
       if (!ma) continue
       const result = nextTier(ma.tier)
       if (result === null) {
-        // 兩顆太陽相撞＝超新星：雙雙湮滅（不生成新星球）、大分數、全場震撼
+        // 兩顆太陽相撞：塌陷成黑洞，兩顆太陽先湮滅，開始吞噬全場的過場事件
         merged.add(a)
         merged.add(b)
         const sx = (a.position.x + b.position.x) / 2
@@ -304,25 +328,16 @@ export class Game {
         Composite.remove(this.engine.world, b)
 
         const multiplier = this.combo.hit(this.time * 1000)
-        const gained = SUPERNOVA_SCORE * multiplier
-        this.score += gained
-        if (this.score > this.best) {
-          this.best = this.score
-          saveBest(this.best)
-        }
+        this.blackHole = { x: sx, y: sy, t: 0, multiplier, absorbed: 0 }
 
         const sun = TIERS[MAX_TIER]
         this.particles.ring(sx, sy, sun.color, sun.radius * 3)
         this.particles.burst(sx, sy, sun.color, 40, 260)
-        this.particles.float(sx, sy - sun.radius, `SUPERNOVA! +${gained}${multiplier > 1 ? ` ×${multiplier}` : ''}`, '#FFD98A')
         this.shake = 10
         playSupernova()
         buzz(40)
-
-        this.cb.onScore(this.score, this.best, this.maxTierReached)
-        this.cb.onCombo(multiplier)
-        // 不呼叫 onMerge：超新星沒有「合成出的星球」，也避免太陽數被重複計入統計
-        this.cb.onSupernova?.(multiplier)
+        // 分數／onSupernova callback 在黑洞吞完全場後才觸發（finishBlackHole），
+        // 這樣加分才能算進被吞掉的星球，不會提早報數字。
         continue
       }
       merged.add(a)
@@ -359,6 +374,78 @@ export class Game {
       this.cb.onMerge?.(result, multiplier)
     }
     this.mergeQueue = []
+  }
+
+  /**
+   * 黑洞吞噬過場：事件視界隨時間長大，範圍內的星球被吸入（換算分數、爆裂消失），
+   * 範圍外的則被拉往中心。時間到（BLACK_HOLE_DUR）不論吞完沒都強制清空剩餘星球，
+   * 動畫必定在有限時間內結束，不會卡關。
+   */
+  private updateBlackHole(dt: number) {
+    const bh = this.blackHole
+    if (!bh) return
+    bh.t += dt
+    const progress = Math.min(1, bh.t / BLACK_HOLE_DUR)
+    const captureR = 30 + progress * 240
+    const pullStrength = 0.0003 + progress * 0.0012
+
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (!m) continue
+      const dx = bh.x - body.position.x
+      const dy = bh.y - body.position.y
+      const dist = Math.hypot(dx, dy) || 1
+      if (dist < captureR + TIERS[m.tier].radius * 0.3) {
+        this.absorbPlanet(body, m)
+        continue
+      }
+      const pull = pullStrength * body.mass
+      Body.applyForce(body, body.position, { x: (dx / dist) * pull, y: (dy / dist) * pull })
+    }
+
+    if (bh.t >= BLACK_HOLE_DUR) this.finishBlackHole()
+  }
+
+  /** 一顆星球被黑洞吞入：換算分數累計、爆裂粒子、從場上移除 */
+  private absorbPlanet(body: Matter.Body, m: PlanetMeta) {
+    const bh = this.blackHole
+    if (!bh) return
+    bh.absorbed += mergeScore(m.tier)
+    this.particles.burst(body.position.x, body.position.y, TIERS[m.tier].color, 6, 90)
+    Composite.remove(this.engine.world, body)
+  }
+
+  /** 黑洞事件結算：強制掃尾清空剩餘星球、依吞噬量給分、播放收尾特效 */
+  private finishBlackHole() {
+    const bh = this.blackHole
+    if (!bh) return
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (!m) continue
+      this.absorbPlanet(body, m)
+    }
+
+    const gained = (SUPERNOVA_SCORE + bh.absorbed) * bh.multiplier
+    this.score += gained
+    if (this.score > this.best) {
+      this.best = this.score
+      saveBest(this.best)
+    }
+
+    this.particles.ring(bh.x, bh.y, '#FFE9B0', TIERS[MAX_TIER].radius * 5)
+    this.particles.burst(bh.x, bh.y, '#FFE9B0', 60, 340)
+    this.particles.float(bh.x, bh.y - 40, `黑洞吞噬 +${gained}${bh.multiplier > 1 ? ` ×${bh.multiplier}` : ''}`, '#FFD98A')
+    this.shake = 14
+    playFanfare()
+    buzz(60)
+
+    this.cb.onScore(this.score, this.best, this.maxTierReached)
+    this.cb.onCombo(bh.multiplier)
+    // 不呼叫 onMerge：黑洞沒有「合成出的星球」，也避免太陽數被重複計入統計
+    this.cb.onSupernova?.(bh.multiplier)
+
+    this.blackHole = null
+    this.dangerTime = 0 // 全場剛被清空，不該立刻又被判定瀕死
   }
 
   private checkGameOver(dt: number) {
@@ -444,6 +531,10 @@ export class Game {
       const yt = (this.time - m.yawnStart) / YAWN_DUR
       const yawn = yt >= 0 && yt <= 1 ? Math.sin(Math.PI * yt) : 0
       drawPlanet(g, TIERS[m.tier], body.position.x, body.position.y, body.angle, scale, this.time, body.id, m.merged ? age : 999, danger, this.idleMood, yawn)
+    }
+
+    if (this.blackHole) {
+      drawBlackHole(g, this.blackHole.x, this.blackHole.y, Math.min(1, this.blackHole.t / BLACK_HOLE_DUR), this.time)
     }
 
     this.particles.draw(g)

@@ -128,11 +128,11 @@ describe('Game 整合（無頭物理模擬）', () => {
       onGameOver() {},
     }
     const game = new Game(cb)
-    // 太陽半徑 134、板寬 460：兩顆並排必然交疊 → 立即碰撞
+    // 刻意讓兩顆太陽中心距離小於半徑和，確保一定交疊碰撞（不依賴板寬/半徑的絕對數值）
     const r = TIERS[MAX_TIER].radius
     const y = BOARD.height - r - 4
-    game.debugSpawn(MAX_TIER, r + 4, y)
-    game.debugSpawn(MAX_TIER, BOARD.width - r - 4, y)
+    game.debugSpawn(MAX_TIER, BOARD.width / 2 - r / 4, y)
+    game.debugSpawn(MAX_TIER, BOARD.width / 2 + r / 4, y)
     expect(game.bodyCount).toBe(2)
     simulate(game, 2)
     expect(game.bodyCount).toBe(0) // 雙雙湮滅，沒有生出新星球
@@ -142,6 +142,37 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.score).toBe(lastScore)
     // 之後照常能玩，物理沒有壞掉
     simulate(game, 4, 0.5)
+    expect(game.state).not.toBe('over')
+  })
+
+  it('黑洞：兩顆太陽相撞後吞掉場上其他星球，加分算進被吞的星球', () => {
+    let supernovas = 0
+    let lastScore = 0
+    const cb: GameCallbacks = {
+      onScore(score) {
+        lastScore = score
+      },
+      onNext() {},
+      onCombo() {},
+      onSupernova() {
+        supernovas++
+      },
+      onGameOver() {},
+    }
+    const game = new Game(cb)
+    const r = TIERS[MAX_TIER].radius
+    const y = BOARD.height - r - 4
+    game.debugSpawn(MAX_TIER, BOARD.width / 2 - r / 4, y)
+    game.debugSpawn(MAX_TIER, BOARD.width / 2 + r / 4, y)
+    // 場上另外擺幾顆無關的小星球，應該一起被黑洞吞掉、分數跟著吞噬量走
+    game.debugSpawn(2, 40, 40)
+    game.debugSpawn(3, BOARD.width - 40, 40)
+    expect(game.bodyCount).toBe(4)
+    simulate(game, 2.5)
+    expect(game.bodyCount).toBe(0) // 全場清空，不只兩顆太陽
+    expect(supernovas).toBe(1)
+    // 66（太陽合成分）+ 3（tier2）+ 6（tier3）＝至少 75 才對得起被吞掉的星球
+    expect(lastScore).toBeGreaterThan(SUPERNOVA_SCORE)
     expect(game.state).not.toBe('over')
   })
 

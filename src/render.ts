@@ -205,6 +205,55 @@ export function drawDangerVignette(g: CanvasRenderingContext2D, time: number, in
   g.fillRect(0, 0, BOARD.width, BOARD.loseY * 1.6)
 }
 
+/* ══════════════ 黑洞（雙太陽相撞後吞噬全場） ══════════════ */
+
+/**
+ * 黑洞吞噬動畫：事件視界隨 progress（0→1）長大，吸積盤高速旋轉。
+ * 純視覺——實際「吸入」判定與移除在 game.ts 的物理更新處理。
+ */
+export function drawBlackHole(g: CanvasRenderingContext2D, x: number, y: number, progress: number, time: number) {
+  const r = 24 + progress * 100
+  g.save()
+  g.translate(x, y)
+
+  // 吸積盤：兩圈手繪橢圓光環，反向高速旋轉
+  for (let i = 0; i < 2; i++) {
+    g.save()
+    g.rotate(time * (i === 0 ? 3.4 : -2.6) + i * 1.3)
+    const ringR = r * (1.6 + i * 0.5)
+    const grad = g.createLinearGradient(-ringR, 0, ringR, 0)
+    grad.addColorStop(0, 'rgba(255, 201, 110, 0)')
+    grad.addColorStop(0.5, `rgba(255, 201, 110, ${0.55 - i * 0.15})`)
+    grad.addColorStop(1, 'rgba(255, 201, 110, 0)')
+    g.strokeStyle = grad
+    g.lineWidth = 6 - i * 2
+    g.beginPath()
+    g.ellipse(0, 0, ringR, ringR * 0.32, 0, 0, Math.PI * 2)
+    g.stroke()
+    g.restore()
+  }
+
+  // 事件視界：純黑圓 + 邊緣暖光暈
+  const glow = g.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 1.35)
+  glow.addColorStop(0, 'rgba(20, 12, 28, 1)')
+  glow.addColorStop(0.75, 'rgba(20, 12, 28, 0.95)')
+  glow.addColorStop(1, 'rgba(255, 210, 140, 0)')
+  g.fillStyle = glow
+  g.beginPath()
+  g.arc(0, 0, r * 1.35, 0, Math.PI * 2)
+  g.fill()
+
+  g.fillStyle = '#120A16'
+  g.beginPath()
+  g.arc(0, 0, r, 0, Math.PI * 2)
+  g.fill()
+  g.strokeStyle = 'rgba(255, 219, 158, 0.85)'
+  g.lineWidth = 2.5
+  g.stroke()
+
+  g.restore()
+}
+
 /* ══════════════ 星球表面（紙剪拼貼風） ══════════════ */
 
 function paintBands(
@@ -432,10 +481,10 @@ export function drawPlanet(
   g.save()
   g.translate(x, y)
 
-  // 太陽：手繪三角光芒，緩慢呼吸
+  // 太陽：手繪三角光芒，緩慢呼吸（原地搖曳，不整圈旋轉）
   if (tier.glow) {
     g.save()
-    g.rotate(time * 0.15)
+    g.rotate(Math.sin(time * 0.2) * 0.12)
     g.fillStyle = 'rgba(232, 179, 60, 0.75)'
     for (let i = 0; i < 12; i++) {
       g.rotate(Math.PI / 6)
