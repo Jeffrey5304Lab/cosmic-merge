@@ -274,10 +274,13 @@ body {
   top: 52px;
   left: 50%;
   transform: translateX(-50%);
+  width: max-content;
+  max-width: 88%;
+  text-align: center;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: clamp(16px, 4.5vw, 20px);
   font-weight: 700;
-  white-space: nowrap;
+  line-height: 1.25;
   color: #ffe9b0;
   text-shadow:
     2px 2px 0 var(--ink),
@@ -863,8 +866,10 @@ body {
   letter-spacing: 3px;
   font-weight: 700;
   color: var(--text-dim);
-  padding: 1px 2px;
+  /* 夠大的觸控區（手機好點）：上下留白 6px，底線留 2px 給 active 態 */
+  padding: 6px 8px 4px;
   border-bottom: 2px solid transparent;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chart-tab.active {
