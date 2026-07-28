@@ -12,6 +12,7 @@ export const STR = {
   evolution: 'EVOLUTION',
   starsTab: 'STARS',
   newStarBanner: (name: string) => `🌟 New star discovered: ${name}!`,
+  goalBlackHole: 'Merge two Suns → a BLACK HOLE swallows everything and reveals a new star!',
   mute: 'Toggle sound',
   overTitle: 'The cosmos is full!',
   overScore: (s: number) => `You scored <strong>${s.toLocaleString('en-US')}</strong>`,

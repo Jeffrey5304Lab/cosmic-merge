@@ -331,6 +331,7 @@ const game = new Game({
     recordMerge(resultTier)
     recordCombo(multiplier)
     checkAchievements()
+    if (resultTier === SUN_TIER) maybeShowBlackHoleGoal() // 首次做出太陽 → 揭示黑洞目標
   },
   onSupernova(multiplier) {
     recordSupernova()
@@ -926,6 +927,20 @@ function checkAchievements() {
   pumpToasts()
 }
 
+/** 玩家首次合成出太陽時，揭示「兩顆太陽→黑洞→發現新恆星」的核心目標（每台裝置一次） */
+const GOAL_BH_KEY = 'cosmic-merge:goal-blackhole-seen'
+function maybeShowBlackHoleGoal() {
+  if (discoveredCount() > 0) return // 已經發現過恆星＝早就懂了，不用提示
+  try {
+    if (localStorage.getItem(GOAL_BH_KEY)) return
+    localStorage.setItem(GOAL_BH_KEY, '1')
+  } catch {
+    /* 私密模式：至少提示一次，忽略寫入失敗 */
+  }
+  toastQueue.push(`<span class="ti">🕳️</span>${STR.goalBlackHole}`)
+  pumpToasts()
+}
+
 /* ── 開發模式：掛上 window 方便在 console 觸發黑洞等事件（正式包不含） ── */
 if (import.meta.env.DEV) (window as unknown as { game?: Game }).game = game
 
@@ -935,6 +950,8 @@ function frame(now: number) {
   const dt = Math.min((now - last) / 1000, 0.1) // 切到背景分頁回來時避免大步進
   last = now
   if (!paused) game.update(dt)
+  // 瀕死時輕輕脈動錘子鈕：在最緊張的當口提示「可敲掉一顆解圍」（沒庫存則兌現一支）
+  hammerBtn.classList.toggle('nudge', game.state === 'playing' && game.inDanger && !smashMode)
   ctx!.clearRect(0, 0, BOARD.width, BOARD.height)
   game.draw(ctx!)
   requestAnimationFrame(frame)

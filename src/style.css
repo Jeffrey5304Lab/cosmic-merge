@@ -294,6 +294,23 @@ body {
   animation: combo-pop 0.45s ease-out;
 }
 
+/* 瀕死時錘子鈕脈動：在最緊張的當口提示可用工具解圍 */
+.btn-icon.nudge {
+  animation: nudge-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes nudge-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(232, 163, 61, 0);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(232, 163, 61, 0.35);
+    transform: scale(1.08);
+  }
+}
+
 /* ── 新手教學提示 ─────────────────── */
 .tutorial {
   position: absolute;
