@@ -822,14 +822,55 @@ body {
   }
 }
 
-/* ── 復活按鈕 ─────────────────────── */
+/* ── 復活按鈕：結算畫面最醒目的「續玩」行動 ── */
 .btn-revive {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  align-self: stretch; /* 佔滿卡片寬度，成為視覺焦點 */
   background: var(--accent);
   color: var(--card);
+  padding: 9px 24px;
+  line-height: 1.15;
+  /* 時效性、且一局限一次的行動：用輕柔脈動吸引目光（按下時停止） */
+  animation: revive-pulse 1.8s ease-in-out infinite;
+}
+
+.btn-revive:active {
+  animation: none;
+}
+
+.revive-main {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.revive-sub {
+  font-size: 12px;
+  font-weight: 400;
+  font-family: var(--font-ui);
+  opacity: 0.92;
 }
 
 .btn-revive.hidden {
   display: none;
+}
+
+@keyframes revive-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-revive {
+    animation: none;
+  }
 }
 
 /* ── 模擬廣告畫面 ─────────────────── */

@@ -398,11 +398,35 @@ function flushPendingScore() {
   }
 }
 
+/** 更新續玩按鈕的雙行文字（預設／載入中／無廣告可重試） */
+function setReviveLabel(state: 'default' | 'loading' | 'retry') {
+  const main = reviveBtn.querySelector<HTMLSpanElement>('.revive-main')
+  const sub = reviveBtn.querySelector<HTMLSpanElement>('.revive-sub')
+  if (!main || !sub) return
+  const label = {
+    default: [STR.reviveMain, STR.reviveSub],
+    loading: [STR.reviveLoading, STR.reviveLoadingSub],
+    retry: [STR.reviveRetry, STR.reviveRetrySub],
+  }[state]
+  main.textContent = label[0]
+  sub.textContent = label[1]
+}
+
 reviveBtn.addEventListener('click', async () => {
   reviveBtn.disabled = true
+  setReviveLabel('loading') // 廣告載入時給明確回饋，慢速連線才不會像壞掉
   const watched = await ads.showRewarded('revive')
   reviveBtn.disabled = false
-  if (!watched || !game.revive()) return
+  if (!watched) {
+    // 沒看完／無廣告可播：提示可重試，稍後還原成預設文字
+    setReviveLabel('retry')
+    window.setTimeout(() => setReviveLabel('default'), 2400)
+    return
+  }
+  if (!game.revive()) {
+    setReviveLabel('default')
+    return
+  }
   // 這局還沒結束：撤回剛記錄的排行榜成績與場數、作廢待送成績，等真正結束再記
   if (lastEntry) {
     removeScore(lastEntry)
@@ -413,6 +437,10 @@ reviveBtn.addEventListener('click', async () => {
   lastResult = null
   setModal(null) // 保險：確保沒有殘留的暫停狀態
   overlayEl.classList.add('hidden')
+  setReviveLabel('default') // 還原，下局結算才顯示正確文字
+  // 卡片已關、玩家視線回到棋盤：用 toast 說明「頂端已清空」發生了什麼
+  toastQueue.push(`<span class="ti">✨</span>${STR.reviveDone}`)
+  pumpToasts()
 })
 
 /* ── 道具：小錘子 ── */
@@ -575,7 +603,7 @@ function applyStrings() {
   shareBtn.textContent = STR.share
   $<HTMLButtonElement>('restart').textContent = STR.restart
   muteBtn.setAttribute('aria-label', STR.mute)
-  reviveBtn.textContent = STR.revive
+  setReviveLabel('default')
   hammerBtn.setAttribute('aria-label', STR.hammer)
   nextNameEl.textContent = planetName(lastNextTier)
   renderBestMerge(bestMergeTier)
