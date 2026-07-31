@@ -186,6 +186,36 @@ describe('多策略試玩壓力測試（fuzz）', () => {
     resetDiscovery(0)
   })
 
+  it('混合輸入（邊丟邊隨機敲榔頭）＋長時間閒置都不會壞', () => {
+    resetDiscovery(0)
+    for (let seed = 0; seed < 4; seed++) {
+      const rng = mulberry32(seed * 11 + 5)
+      const game = new Game({ onScore() {}, onNext() {}, onCombo() {}, onMerge() {}, onSupernova() {}, onDiscover() {}, onGameOver() {} }, rng)
+      let sinceDrop = 0
+      // 邊丟邊敲：驗證 smash 與合成/結束判定交錯時不衝突
+      for (let t = 0; t < 40 && game.state !== 'over'; t += STEP) {
+        sinceDrop += STEP
+        if (sinceDrop >= 0.5) {
+          sinceDrop = 0
+          game.aim(rng() * BOARD.width)
+          game.drop()
+        }
+        if (rng() < 0.02) game.smash(rng() * BOARD.width, rng() * BOARD.height)
+        game.update(STEP)
+        expect(Number.isFinite(game.score)).toBe(true)
+        for (const p of game.debugPlanets) {
+          expect(p.x).toBeGreaterThan(-60)
+          expect(p.x).toBeLessThan(BOARD.width + 60)
+        }
+      }
+      // 長時間閒置：不投放只推進，跑滿哈欠/焦躁情緒排程（曾經沒被任何測試踩過）
+      for (let i = 0; i < 60 * 30; i++) game.update(STEP)
+      expect(Number.isFinite(game.score)).toBe(true)
+      expect(game.state).not.toBe('over') // 沒丟新星球不該無故結束
+    }
+    resetDiscovery(0)
+  })
+
   it('黑洞在各種發現進度＋隨機雜物下一定會結束（不卡住）', () => {
     for (const discovered of [0, 1, 4, 8, MAX_TIER - SUN_TIER]) {
       for (let seed = 0; seed < 4; seed++) {
