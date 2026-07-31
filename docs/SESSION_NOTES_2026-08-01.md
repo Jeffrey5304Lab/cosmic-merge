@@ -40,6 +40,33 @@
 
 ---
 
+## 🐛 無頭多策略試玩壓力測試 — 找到並修掉 2 個真 bug
+
+你要求「持續試玩、不同策略、找 bug」。我寫了一支無頭 fuzz 測試 `src/playtest.sim.test.ts`，
+用真的 `Game`（含 matter-js 物理）跑很多場、5 種投放策略（置中／隨機／三欄／貼牆／貪婪）＋
+猛丟／黑洞／復活／混合輸入／長閒置，每一幀檢查不變量（NaN、越界、速度爆衝、爆場、分數倒退、
+結束只觸發一次）。**離線另跑過一次 200 場 sweep，修完後零異常。**
+
+**Bug 1（`1d024fc`）— 星球被擠穿側牆**：場面壓得很滿（快輸時），matter-js 會把小星球
+擠穿 60px 厚的側牆，跑到 x=-77（整顆掉出畫面外）。修法：每個物理幀 `containBodies()` 安全網把
+越界的星球拉回場內＋抵銷橫向速度；解算迭代 position 6→8、velocity 4→6 降低發生率。正常靠牆
+靜止的星球不受影響（peakBodies ~50，無效能疑慮）。
+
+**Bug 2（`0eccc27`）— 黑洞過場中還能敲榔頭**：`smash()` 只擋 `state==='over'`，沒擋黑洞
+過場（`drop()` 有擋）。玩家可在 2.7s 吞噬動畫中敲掉正被吸入的星球（浪費榔頭＋那顆的分數沒被
+算進黑洞）。修法：`smash()` 比照 `drop()` 也擋 `this.blackHole`；新增 `inBlackHole` getter。
+（不會 crash——`updateBlackHole` 每幀重查 bodies——但 UX/計分錯。）
+
+**查過但不是 bug**：`processMerges` 的 mergeQueue 只在單一 `update()` 內產生並清空，玩家 smash
+無法插進那個空檔，所以「敲掉正要合成的星球」不可達；多重碰撞配對也有 `merged` Set 正確處理。
+
+測試套件：57 → **62 通過**；`npm test` 從 38s 精簡到 ~18s（fuzz 場數收斂、加顯式 timeout，
+避免長同步測試在 orchestrator 下偶發 flake）。tsc + build 綠。
+
+> ⚠️ 這 3 筆（`1d024fc` / `0eccc27` / `d8795d8`）目前**只在本地**，等你早上 review 後 push。
+
+---
+
 ## 🔎 100 次試玩 heuristic review — 給你早上挑的清單
 
 我以「玩到第 100 局的玩家」視角走過整個結算與續玩流程。除了已修的 revive，其餘我**刻意沒擅自動**
