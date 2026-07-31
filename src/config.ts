@@ -38,8 +38,8 @@ export const ADMOB_LIVE = import.meta.env.VITE_ADMOB_LIVE === '1'
 const TEST_REWARDED_IOS = 'ca-app-pub-3940256099942544/1712485313'
 const TEST_REWARDED_ANDROID = 'ca-app-pub-3940256099942544/5224354917'
 
-// ⬇️ 上架前換成你自己的正式 Rewarded 廣告單元 ID（留空＝還沒申請，會自動用測試 ID）
-const REAL_REWARDED_IOS = ''
+// ⬇️ 正式 Rewarded 廣告單元 ID（apps.admob.com，Cosmic Merge）。留空＝還沒申請，會自動用測試 ID
+const REAL_REWARDED_IOS = 'ca-app-pub-9224826741087415/5573830223'
 const REAL_REWARDED_ANDROID = ''
 
 /** 正式發佈且已填正式 ID → 用正式 ID；否則一律用安全的測試 ID */
