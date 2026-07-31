@@ -8,7 +8,7 @@
  */
 import { Capacitor } from '@capacitor/core'
 import { AdMob, RewardAdPluginEvents } from '@capacitor-community/admob'
-import { ADMOB_REWARDED_AD_UNIT_ID_ANDROID, ADMOB_REWARDED_AD_UNIT_ID_IOS } from './config'
+import { ADMOB_LIVE, ADMOB_REWARDED_AD_UNIT_ID_ANDROID, ADMOB_REWARDED_AD_UNIT_ID_IOS } from './config'
 
 export type AdSlot = 'revive' | 'hammer'
 
@@ -39,8 +39,8 @@ class AdMobProvider implements AdProvider {
 
   private ensureInit(): Promise<void> {
     if (!this.initDone) {
-      // import.meta.env.DEV 時標記為測試流量，避免開發機誤觸真實廣告計費
-      this.initDone = AdMob.initialize({ initializeForTesting: import.meta.env.DEV }).then(() => undefined)
+      // 非正式發佈時標記為測試流量，避免開發／測試機誤觸真實廣告計費（與廣告單元 ID 的切換一致）
+      this.initDone = AdMob.initialize({ initializeForTesting: !ADMOB_LIVE }).then(() => undefined)
     }
     return this.initDone
   }
