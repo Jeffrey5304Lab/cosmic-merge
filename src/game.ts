@@ -124,6 +124,9 @@ export class Game {
     this.currentTier = pickDropTier(this.rng)
     this.nextDropTier = pickDropTier(this.rng)
     this.engine.gravity.y = 1.1
+    // 提高解算迭代：壓得很滿時（接近輸線）減少小星球被擠穿側牆的機率（配合 containBodies 安全網）
+    this.engine.positionIterations = 8
+    this.engine.velocityIterations = 6
     this.buildWalls()
     // 同階碰撞就排入合成佇列。collisionStart=剛接觸、collisionActive=持續接觸，
     // 兩者都聽：落定後才貼在一起的同階星球（看起來碰到卻沒合）也會被合掉。
@@ -280,6 +283,7 @@ export class Game {
       }
       // 一次累積過多（分頁切回/長卡頓）：丟棄殘餘，避免追幀爆衝
       if (this.accumulator > step) this.accumulator = 0
+      this.containBodies() // 安全網：把被擠出側牆的星球拉回場內
       if (this.blackHole) {
         // 黑洞吞噬中：場面是「過場動畫」，暫停一般合成判定與輸線判定
         this.mergeQueue = []
@@ -295,6 +299,25 @@ export class Game {
     }
     this.particles.update(dt)
     this.meteors.update(dt, this.time)
+  }
+
+  /**
+   * 安全網：把任何被擠出側牆的星球拉回場內，杜絕「壓太滿時小星球穿牆消失」的視覺 bug。
+   * 只在明顯越界（超過靜止貼牆位置 2px 以上）時修正，正常靠牆靜止的星球不受影響。
+   */
+  private containBodies() {
+    for (const body of Composite.allBodies(this.engine.world)) {
+      const m = this.meta.get(body)
+      if (!m) continue
+      const r = TIERS[m.tier].radius
+      const minX = r
+      const maxX = BOARD.width - r
+      const x = body.position.x
+      if (x < minX - 2 || x > maxX + 2) {
+        Body.setPosition(body, { x: Math.min(Math.max(x, minX), maxX), y: body.position.y })
+        Body.setVelocity(body, { x: 0, y: body.velocity.y }) // 抵銷把它擠出去的橫向速度
+      }
+    }
   }
 
   /** 更新「焦躁等待」情緒（全場一致的不耐煩）：玩家懸停未投，閒置 5 秒後開始、再 4 秒爬滿 */
