@@ -197,7 +197,8 @@ export class Game {
    * 手指點擊不精準（最小星球半徑僅 17），給 24px 容忍、取最近的一顆。
    */
   smash(x: number, y: number): boolean {
-    if (this.state === 'over') return false
+    // 黑洞過場中鎖住輸入（與 drop 一致）：不讓玩家敲掉正被吸入的星球、白白浪費榔頭
+    if (this.state === 'over' || this.blackHole) return false
     let target: Matter.Body | null = null
     let targetR = 0
     let bestD = Infinity
@@ -560,6 +561,11 @@ export class Game {
       if (m) out.push({ x: body.position.x, y: body.position.y, tier: m.tier, r: TIERS[m.tier].radius })
     }
     return out
+  }
+
+  /** 黑洞吞噬過場是否進行中（過場期間輸入鎖住），供測試與 UI 判斷 */
+  get inBlackHole(): boolean {
+    return this.blackHole !== null
   }
 
   /** 場上星球數（不含牆），供測試與 debug */
