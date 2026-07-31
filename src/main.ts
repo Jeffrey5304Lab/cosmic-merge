@@ -1,5 +1,5 @@
 import './style.css'
-import { Game } from './game'
+import { Game, MAX_REVIVES } from './game'
 import { BOARD, SUN_TIER, TIERS } from './planets'
 import { discoveredCount } from './discovery'
 import { drawPlanet } from './render'
@@ -359,8 +359,9 @@ const game = new Game({
     }
     lastRank = addScore(lastEntry)
     lastResult = { score, best, maxTier }
-    const canRevive = !game.reviveUsed && score > 0
+    const canRevive = game.reviveCount < MAX_REVIVES && score > 0
     reviveBtn.classList.toggle('hidden', !canRevive)
+    setReviveLabel('default') // 依已用次數更新「還能續幾次」的說明
     // 先不送出 DB：等玩家填完名字、按 Play Again 或離開分頁才送（見 flushPendingScore）
     pendingSubmit = { score, maxTier }
     renderGameOver()
@@ -403,8 +404,11 @@ function setReviveLabel(state: 'default' | 'loading' | 'retry') {
   const main = reviveBtn.querySelector<HTMLSpanElement>('.revive-main')
   const sub = reviveBtn.querySelector<HTMLSpanElement>('.revive-sub')
   if (!main || !sub) return
+  // 用過至少一次後，副標改顯示「還能續幾次」，讓玩家知道不是無限
+  const remaining = MAX_REVIVES - game.reviveCount
+  const defaultSub = game.reviveCount === 0 ? STR.reviveSub : STR.reviveSubLeft(remaining)
   const label = {
-    default: [STR.reviveMain, STR.reviveSub],
+    default: [STR.reviveMain, defaultSub],
     loading: [STR.reviveLoading, STR.reviveLoadingSub],
     retry: [STR.reviveRetry, STR.reviveRetrySub],
   }[state]

@@ -21,6 +21,9 @@ import { buzz } from './haptics'
 
 const { Engine, Bodies, Body, Composite, Events } = Matter
 
+/** 一局最多可看廣告續玩的次數 */
+export const MAX_REVIVES = 3
+
 interface PlanetMeta {
   tier: number
   /** 出生時間（秒），用於彈跳出生動畫與寬限期 */
@@ -87,8 +90,8 @@ export class Game {
   score = 0
   best = loadBest()
   maxTierReached = 0
-  /** 每局限一次的復活是否已用掉 */
-  reviveUsed = false
+  /** 本局已用掉的復活次數（每局最多 MAX_REVIVES 次） */
+  reviveCount = 0
 
   private engine = Engine.create()
   private meta = new WeakMap<Matter.Body, PlanetMeta>()
@@ -174,11 +177,11 @@ export class Game {
 
   /**
    * 復活（獎勵式廣告的兌現）：清掉上方 45% 的星球，繼續本局。
-   * 每局限一次；成功回傳 true。
+   * 一局最多 MAX_REVIVES 次；成功回傳 true。
    */
   revive(): boolean {
-    if (this.state !== 'over' || this.reviveUsed) return false
-    this.reviveUsed = true
+    if (this.state !== 'over' || this.reviveCount >= MAX_REVIVES) return false
+    this.reviveCount++
     for (const body of Composite.allBodies(this.engine.world)) {
       const m = this.meta.get(body)
       if (m && body.position.y < BOARD.height * 0.45) {
@@ -257,7 +260,7 @@ export class Game {
     this.waitTime = 0
     this.idleMood = 0
     this.nextYawnAt = 0
-    this.reviveUsed = false
+    this.reviveCount = 0
     this.state = 'ready'
     this.currentTier = pickDropTier(this.rng)
     this.nextDropTier = pickDropTier(this.rng)

@@ -36,6 +36,7 @@ export const STR = {
   // 續玩（獎勵廣告）按鈕的各種狀態：清楚說明「要看廣告、能續玩、會清掉頂端」
   reviveMain: '▶ Continue Playing',
   reviveSub: 'Watch a short ad · clears the top',
+  reviveSubLeft: (n: number) => `Watch a short ad · ${n} more ${n === 1 ? 'time' : 'times'}`,
   reviveLoading: 'Loading ad…',
   reviveLoadingSub: 'hang tight',
   reviveRetry: 'No ad available',

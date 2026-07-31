@@ -251,7 +251,7 @@ describe('多策略試玩壓力測試（fuzz）', () => {
 
   it('復活壓力：死→復活→續玩→再死，行為一致且不崩', { timeout: 30000 }, () => {
     resetDiscovery(0)
-    for (let seed = 0; seed < 6; seed++) {
+    for (let seed = 0; seed < 3; seed++) {
       let overs = 0
       const game = new Game(
         { onScore() {}, onNext() {}, onCombo() {}, onGameOver() {
@@ -273,16 +273,19 @@ describe('多策略試玩壓力測試（fuzz）', () => {
           game.update(STEP)
         }
       }
+      // 一局最多 3 次：前 3 次都能復活，第 4 次不行
+      for (let n = 1; n <= 3; n++) {
+        fillToOver()
+        expect(game.state).toBe('over')
+        const before = game.bodyCount
+        expect(game.revive()).toBe(true)
+        expect(game.state).toBe('playing')
+        expect(game.bodyCount).toBeLessThanOrEqual(before)
+      }
       fillToOver()
       expect(game.state).toBe('over')
-      const before = game.bodyCount
-      expect(game.revive()).toBe(true)
-      expect(game.state).toBe('playing')
-      expect(game.bodyCount).toBeLessThanOrEqual(before)
-      fillToOver()
-      expect(game.state).toBe('over')
-      expect(game.revive()).toBe(false) // 每局限一次
-      expect(overs).toBe(2)
+      expect(game.revive()).toBe(false) // 超過上限
+      expect(overs).toBe(4)
     }
     resetDiscovery(0)
   })

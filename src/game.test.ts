@@ -71,43 +71,40 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.score).toBe(scoreAtEnd)
   })
 
-  it('復活：清掉上方星球、繼續本局、每局限一次', () => {
+  it('復活：清掉上方星球、繼續本局、一局最多 3 次', () => {
     const { game, events } = makeGame()
     const step = 1 / 60
-    let sinceDrop = 0
-    for (let t = 0; t < 150 && game.state !== 'over'; t += step) {
-      sinceDrop += step
-      if (sinceDrop >= 0.5) {
-        sinceDrop = 0
-        game.drop()
+    // 隨機落點快速堆滿（置中連丟過於高效合成、不易死）
+    const fillToOver = () => {
+      let sinceDrop = 0
+      for (let t = 0; t < 200 && game.state !== 'over'; t += step) {
+        sinceDrop += step
+        if (sinceDrop >= 0.4) {
+          sinceDrop = 0
+          game.aim(Math.random() * BOARD.width)
+          game.drop()
+        }
+        game.update(step)
       }
-      game.update(step)
     }
-    expect(game.state).toBe('over')
-    const bodiesBefore = game.bodyCount
-    const scoreBefore = game.score
 
-    expect(game.revive()).toBe(true)
-    expect(game.state).toBe('playing')
-    expect(game.bodyCount).toBeLessThan(bodiesBefore)
-    expect(game.score).toBe(scoreBefore) // 分數保留
-
-    // 還能繼續玩
-    simulate(game, 5, 0.5)
-    expect(game.score).toBeGreaterThanOrEqual(scoreBefore)
-
-    // 再死一次不能再復活
-    for (let t = 0; t < 150 && game.state !== 'over'; t += step) {
-      sinceDrop += step
-      if (sinceDrop >= 0.5) {
-        sinceDrop = 0
-        game.drop()
-      }
-      game.update(step)
+    // 連續 3 次都能看廣告續玩（分數保留、上方清空）
+    for (let n = 1; n <= 3; n++) {
+      fillToOver()
+      expect(game.state).toBe('over')
+      const before = game.bodyCount
+      const scoreBefore = game.score
+      expect(game.revive()).toBe(true)
+      expect(game.state).toBe('playing')
+      expect(game.bodyCount).toBeLessThan(before)
+      expect(game.score).toBe(scoreBefore)
     }
+
+    // 第 4 次死亡不能再復活
+    fillToOver()
     expect(game.state).toBe('over')
     expect(game.revive()).toBe(false)
-    expect(events.gameOver).toBe(2)
+    expect(events.gameOver).toBe(4)
   })
 
   it('超新星：兩顆太陽相撞湮滅、得大分、觸發 onSupernova/onDiscover 並誕生新恆星', () => {
