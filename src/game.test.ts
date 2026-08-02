@@ -71,6 +71,39 @@ describe('Game 整合（無頭物理模擬）', () => {
     expect(game.score).toBe(scoreAtEnd)
   })
 
+  it('結束前會先進 ending 慢鏡，延後才真正 over 並回呼 onGameOver（只一次）', () => {
+    const { game, events } = makeGame()
+    const step = 1 / 60
+    // 隨機落點堆到觸發結束
+    let sinceDrop = 0
+    for (let t = 0; t < 200 && game.state === 'ready'; t += step) {
+      // 先推進到 playing
+      sinceDrop += step
+      if (sinceDrop >= 0.4) {
+        sinceDrop = 0
+        game.aim(Math.random() * BOARD.width)
+        game.drop()
+      }
+      game.update(step)
+    }
+    for (let t = 0; t < 200 && game.state === 'playing'; t += step) {
+      sinceDrop += step
+      if (sinceDrop >= 0.4) {
+        sinceDrop = 0
+        game.aim(Math.random() * BOARD.width)
+        game.drop()
+      }
+      game.update(step)
+    }
+    // 一定是先進「慢鏡」而不是直接 over，且此時還沒回呼 onGameOver
+    expect(game.state).toBe('ending')
+    expect(events.gameOver).toBe(0)
+    // 推進超過慢鏡時長 → 真正結束、回呼一次
+    for (let i = 0; i < 60; i++) game.update(step) // 1 秒 > END_BEAT(0.5)
+    expect(game.state).toBe('over')
+    expect(events.gameOver).toBe(1)
+  })
+
   it('復活：清掉上方星球、繼續本局、一局最多 3 次', () => {
     const { game, events } = makeGame()
     const step = 1 / 60

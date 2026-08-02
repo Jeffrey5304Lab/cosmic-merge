@@ -205,6 +205,26 @@ export function drawDangerVignette(g: CanvasRenderingContext2D, time: number, in
   g.fillRect(0, 0, BOARD.width, BOARD.loseY * 1.6)
 }
 
+/**
+ * 遊戲結束前的「差一點」慢鏡收尾：全場漸暗＋暗角，把目光聚到棋盤中央的命運時刻。
+ * progress 0→1（慢鏡經過比例），漸暗越來越重，之後才彈出結算卡。
+ */
+export function drawEndingBeat(g: CanvasRenderingContext2D, progress: number) {
+  const p = Math.min(1, Math.max(0, progress))
+  const ease = p * (2 - p) // easeOutQuad：一開始就明顯壓暗，末段趨緩
+  // 整體壓暗
+  g.fillStyle = `rgba(18, 16, 28, ${0.5 * ease})`
+  g.fillRect(0, 0, BOARD.width, BOARD.height)
+  // 暗角：中心較亮、四周更暗
+  const cx = BOARD.width / 2
+  const cy = BOARD.height / 2
+  const grad = g.createRadialGradient(cx, cy, BOARD.width * 0.2, cx, cy, BOARD.width * 0.72)
+  grad.addColorStop(0, 'rgba(12, 10, 20, 0)')
+  grad.addColorStop(1, `rgba(10, 8, 18, ${0.5 * ease})`)
+  g.fillStyle = grad
+  g.fillRect(0, 0, BOARD.width, BOARD.height)
+}
+
 /* ══════════════ 黑洞（頂階恆星相撞後吞噬全場） ══════════════ */
 
 /**

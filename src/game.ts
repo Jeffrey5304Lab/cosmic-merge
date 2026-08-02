@@ -10,6 +10,7 @@ import {
   drawBackground,
   drawBlackHole,
   drawDangerVignette,
+  drawEndingBeat,
   drawLoseLine,
   drawPlanet,
   drawSupernovaFlash,
@@ -23,6 +24,10 @@ const { Engine, Bodies, Body, Composite, Events } = Matter
 
 /** 一局最多可看廣告續玩的次數 */
 export const MAX_REVIVES = 3
+
+/** 遊戲結束前的「差一點」慢鏡收尾時長（真實秒）＋此期間物理放慢的倍率 */
+const END_BEAT = 0.5
+const END_BEAT_SLOWMO = 0.25
 
 interface PlanetMeta {
   tier: number
@@ -52,7 +57,7 @@ interface BlackHoleEvent {
   cleared: boolean
 }
 
-export type GameState = 'ready' | 'playing' | 'over'
+export type GameState = 'ready' | 'playing' | 'ending' | 'over'
 
 export interface GameCallbacks {
   onScore(score: number, best: number, maxTier: number): void
@@ -92,6 +97,8 @@ export class Game {
   maxTierReached = 0
   /** 本局已用掉的復活次數（每局最多 MAX_REVIVES 次） */
   reviveCount = 0
+  /** 結束慢鏡（'ending' 狀態）已經過的真實秒數 */
+  private endBeat = 0
 
   private engine = Engine.create()
   private meta = new WeakMap<Matter.Body, PlanetMeta>()
@@ -200,8 +207,8 @@ export class Game {
    * 手指點擊不精準（最小星球半徑僅 17），給 24px 容忍、取最近的一顆。
    */
   smash(x: number, y: number): boolean {
-    // 黑洞過場中鎖住輸入（與 drop 一致）：不讓玩家敲掉正被吸入的星球、白白浪費榔頭
-    if (this.state === 'over' || this.blackHole) return false
+    // 結束慢鏡／黑洞過場中鎖住輸入（與 drop 一致）：不讓玩家敲星球、白白浪費榔頭
+    if (this.state === 'over' || this.state === 'ending' || this.blackHole) return false
     let target: Matter.Body | null = null
     let targetR = 0
     let bestD = Infinity
@@ -234,7 +241,7 @@ export class Game {
 
   /** 玩家投放 */
   drop() {
-    if (this.state === 'over' || this.dropCooldown > 0 || this.blackHole) return
+    if (this.state === 'over' || this.state === 'ending' || this.dropCooldown > 0 || this.blackHole) return
     this.state = 'playing'
     this.spawnPlanet(this.currentTier, this.aimX, BOARD.dropY)
     playDrop()
@@ -278,7 +285,9 @@ export class Game {
       // 固定步長積分：每次 Engine.update 都用同一個 delta（1/60 秒），
       // matter-js 的速度校正恆為 1，幀率波動/點擊卡頓不再讓星球彈跳。
       const step = 1 / 60
-      this.accumulator += dt
+      // 結束慢鏡（'ending'）：物理放慢成 END_BEAT_SLOWMO 倍速，做出「差一點」的戲劇感
+      const slow = this.state === 'ending' ? END_BEAT_SLOWMO : 1
+      this.accumulator += dt * slow
       let steps = 0
       while (this.accumulator >= step && steps < 5) {
         Engine.update(this.engine, step * 1000)
@@ -292,6 +301,14 @@ export class Game {
         // 黑洞吞噬中：場面是「過場動畫」，暫停一般合成判定與輸線判定
         this.mergeQueue = []
         this.updateBlackHole(dt)
+      } else if (this.state === 'ending') {
+        // 慢鏡收尾：只放慢推進＋計時（用真實 dt），時間到才真正結束並彈出結算卡
+        this.mergeQueue = []
+        this.endBeat += dt
+        if (this.endBeat >= END_BEAT) {
+          this.state = 'over'
+          this.cb.onGameOver(this.score, this.best, this.maxTierReached)
+        }
       } else {
         this.processMerges()
         this.checkGameOver(dt)
@@ -536,9 +553,10 @@ export class Game {
     }
     this.dangerTime = overflowing ? this.dangerTime + dt : 0
     if (this.dangerTime > 1.2) {
-      this.state = 'over'
+      // 先進「差一點」慢鏡收尾，撐 END_BEAT 秒後才真正結束、彈出結算卡（見 update）
+      this.state = 'ending'
+      this.endBeat = 0
       playGameOver()
-      this.cb.onGameOver(this.score, this.best, this.maxTierReached)
     }
   }
 
@@ -602,8 +620,8 @@ export class Game {
       drawDangerVignette(g, this.time, Math.min(1, this.dangerTime / 1.2 + 0.4))
     }
 
-    if (this.state !== 'over' && !this.blackHole) {
-      // 黑洞過場中不畫瞄準線與預備星球：投放被鎖，畫了只會干擾大場面
+    if (this.state !== 'over' && this.state !== 'ending' && !this.blackHole) {
+      // 黑洞過場／結束慢鏡中不畫瞄準線與預備星球：投放被鎖，畫了只會干擾大場面
       drawAimLine(g, this.aimX, TIERS[this.currentTier].radius, this.time)
       // 預備投放的星球（懸浮在頂端）
       const hover = Math.sin(this.time * 3) * 3
@@ -637,6 +655,10 @@ export class Game {
     if (this.blackHole) {
       // 終幕白閃疊在最上層：黑洞塌縮、整個宇宙亮起來，然後新恆星誕生
       drawSupernovaFlash(g, this.blackHole.x, this.blackHole.y, this.blackHole.t)
+    }
+    if (this.state === 'ending') {
+      // 「差一點」慢鏡：全場漸暗＋暗角，聚焦最後一刻，再彈出結算卡
+      drawEndingBeat(g, this.endBeat / END_BEAT)
     }
     g.restore()
   }

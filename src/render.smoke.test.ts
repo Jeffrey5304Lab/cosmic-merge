@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TIERS } from './planets'
-import { BH_PHASE, drawBlackHole, drawPlanet, drawSupernovaFlash, makeStars } from './render'
+import { BH_PHASE, drawBlackHole, drawEndingBeat, drawPlanet, drawSupernovaFlash, makeStars } from './render'
 
 /**
  * 煙霧測試：一般單元測試不會真的跑 canvas 繪製路徑（無頭環境沒有 document/canvas），
@@ -40,6 +40,13 @@ describe('render 煙霧測試（繪製路徑不擲例外）', () => {
     for (const t of [0.1, BH_PHASE.form + 0.1, BH_PHASE.devourEnd + 0.1, BH_PHASE.total]) {
       expect(() => drawBlackHole(g, 230, 330, t, 2.5, stars)).not.toThrow()
       expect(() => drawSupernovaFlash(g, 230, 330, t)).not.toThrow()
+    }
+  })
+
+  it('結束慢鏡收尾（各進度）都能畫', () => {
+    const g = fakeCtx()
+    for (const p of [0, 0.5, 1]) {
+      expect(() => drawEndingBeat(g, p)).not.toThrow()
     }
   })
 })
