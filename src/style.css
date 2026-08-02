@@ -562,12 +562,13 @@ body {
   font-size: 16px;
 }
 
-/* 明確的「送出到排行榜」主行動：搶眼的珊瑚色，送出後轉為淡化的已完成狀態 */
+/* 「送出到排行榜」次要行動：蜂蜜黃，讓珊瑚色的 Continue Playing 成為唯一主行動；
+   送出後轉為淡化的已完成狀態 */
 .btn-submit {
   align-self: center;
   font-size: 16px;
-  background: var(--accent);
-  color: var(--card);
+  background: var(--honey);
+  color: var(--ink);
 }
 
 .btn-submit:disabled {
