@@ -13,7 +13,7 @@ export const SUPERNOVA_SCORE = 100
  * rng 可注入以便測試。
  */
 export function pickDropTier(rng: () => number = Math.random): number {
-  // 權重：tier 0 最常見，遞減
+  // 權重：tier 0 最常見，遞減（小起手＝更多空間建鏈，是西瓜類爬頂的關鍵）
   const weights = [10, 8, 6, 4, 2]
   const total = weights.reduce((a, b) => a + b, 0)
   let roll = rng() * total
