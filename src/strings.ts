@@ -33,6 +33,12 @@ export const STR = {
   rankTop: "👑 You're #1 in the world!",
   rankTopLocal: '👑 Top of your board!',
   namePlaceholder: 'Your name',
+  // 每日連續登入獎勵彈窗
+  dailyStreak: (n: number) => `🔥 Day ${n} streak`,
+  dailyReward: (n: number) => `+${n} 🔨 Hammer${n === 1 ? '' : 's'}`,
+  dailyMilestone: '🎉 Milestone bonus!',
+  dailyClaim: 'Claim reward',
+  dailyClaimed: (n: number) => `Daily reward: +${n} 🔨`,
   // 續玩（獎勵廣告）按鈕的各種狀態：清楚說明「要看廣告、能續玩、會清掉頂端」
   reviveMain: '▶ Continue Playing',
   reviveSub: 'Watch a short ad · clears the top',

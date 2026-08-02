@@ -14,6 +14,7 @@ import { REMOTE_ENABLED } from './config'
 import { fetchRank, fetchTopScores, submitScore, type RemoteScoreEntry } from './scores-remote'
 import { ads } from './ads'
 import { addHammer, getHammers, refillFreeHammers, useHammer } from './inventory'
+import { claimDaily, peekDaily } from './daily'
 import { Capacitor } from '@capacitor/core'
 
 function $<T extends HTMLElement>(id: string): T {
@@ -775,14 +776,16 @@ const lbTabsEl = $<HTMLDivElement>('lb-tabs')
 const lbTabGlobal = $<HTMLButtonElement>('lb-tab-global')
 const lbTabMine = $<HTMLButtonElement>('lb-tab-mine')
 const achvModal = $<HTMLDivElement>('achv-modal')
+const dailyModal = $<HTMLDivElement>('daily-modal')
 let paused = false
 let lbRequestId = 0
 let lbMode: 'global' | 'mine' = 'global'
 
-/** 同時管理兩個 modal：一次只開一個，開著就暫停物理（畫面凍結） */
-function setModal(which: 'leaderboard' | 'achv' | null) {
+/** 同時管理各 modal：一次只開一個，開著就暫停物理（畫面凍結） */
+function setModal(which: 'leaderboard' | 'achv' | 'daily' | null) {
   leaderboardModal.classList.toggle('hidden', which !== 'leaderboard')
   achvModal.classList.toggle('hidden', which !== 'achv')
+  dailyModal.classList.toggle('hidden', which !== 'daily')
   paused = which !== null
 }
 
@@ -935,6 +938,37 @@ achvModal.addEventListener('click', (e) => {
   if (e.target === achvModal) setModal(null) // 點背景關閉
 })
 
+/* ── 每日連續登入獎勵 ── */
+const dailyStreakEl = $<HTMLParagraphElement>('daily-streak')
+const dailyRewardEl = $<HTMLParagraphElement>('daily-reward')
+const dailyMilestoneEl = $<HTMLParagraphElement>('daily-milestone')
+const dailyClaimBtn = $<HTMLButtonElement>('daily-claim')
+
+/** 當天第一次開遊戲且尚未領：彈出每日獎勵卡（預覽領取後的 streak／獎勵） */
+function maybeShowDaily() {
+  const preview = peekDaily()
+  if (!preview) return // 今天已領過
+  dailyStreakEl.textContent = STR.dailyStreak(preview.streak)
+  dailyRewardEl.textContent = STR.dailyReward(preview.hammers)
+  dailyMilestoneEl.textContent = STR.dailyMilestone
+  dailyMilestoneEl.classList.toggle('hidden', !preview.milestone)
+  dailyClaimBtn.textContent = STR.dailyClaim
+  setModal('daily')
+}
+
+dailyClaimBtn.addEventListener('click', () => {
+  const reward = claimDaily()
+  setModal(null)
+  if (!reward) return // 保險：已被領走
+  addHammer(reward.hammers)
+  refreshHammerCount()
+  toastQueue.push(`<span class="ti">🔨</span>${STR.dailyClaimed(reward.hammers)}`)
+  pumpToasts()
+})
+dailyModal.addEventListener('click', (e) => {
+  if (e.target === dailyModal) setModal(null) // 點背景關閉＝略過（未領，下次進來還會出現）
+})
+
 /* ── 成就解鎖提示（toast，依序播放） ── */
 const toastQueue: string[] = []
 let toastBusy = false
@@ -992,3 +1026,6 @@ function frame(now: number) {
   requestAnimationFrame(frame)
 }
 requestAnimationFrame(frame)
+
+// 當天第一次開遊戲：彈出每日連續登入獎勵（尚未領才會出現）
+maybeShowDaily()
