@@ -456,7 +456,10 @@ const hintTextEl = $<HTMLParagraphElement>('hint-text')
 let smashMode = false
 
 function refreshHammerCount() {
-  hammerCountEl.textContent = String(getHammers())
+  const n = getHammers()
+  // 沒庫存時徽章顯示 ▶（提示「點我看廣告換一支」），而非死板的 0
+  hammerCountEl.textContent = n > 0 ? String(n) : '▶'
+  hammerCountEl.classList.toggle('ad', n === 0)
 }
 refillFreeHammers() // 開遊戲即補到免費樓地板
 refreshHammerCount()
@@ -509,6 +512,24 @@ function enterSmashMode() {
   showHammerHint()
 }
 
+/* ── 沒庫存時的「看廣告換榔頭」兩段式確認：先講清楚是廣告，再點一次才播 ── */
+let hammerAdArmed = false
+let hammerAdTimer = 0
+
+function armHammerAd() {
+  hammerAdArmed = true
+  hintEl.classList.remove('hidden', 'mini', 'clickable')
+  hintTextEl.textContent = STR.hammerAdPrompt
+  window.clearTimeout(hammerAdTimer)
+  hammerAdTimer = window.setTimeout(disarmHammerAd, 4000) // 4 秒沒確認就取消，不留殘影
+}
+
+function disarmHammerAd() {
+  hammerAdArmed = false
+  window.clearTimeout(hammerAdTimer)
+  if (!smashMode) hintEl.classList.add('hidden')
+}
+
 hammerBtn.addEventListener('click', async () => {
   hammerBtn.blur()
   if (smashMode) {
@@ -519,7 +540,12 @@ hammerBtn.addEventListener('click', async () => {
     enterSmashMode()
     return
   }
-  // 沒庫存：兌現一支（v1 直接給；接真實廣告後＝看完才給），並直接進入敲擊模式
+  // 沒庫存：第一次點先顯示「看廣告換 🔨？」，第二次點才真的播廣告（避免誤觸、先告知價值）
+  if (!hammerAdArmed) {
+    armHammerAd()
+    return
+  }
+  disarmHammerAd()
   hammerBtn.disabled = true
   const watched = await ads.showRewarded('hammer')
   hammerBtn.disabled = false

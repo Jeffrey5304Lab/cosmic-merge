@@ -846,6 +846,12 @@ body {
   font-family: var(--font-ui);
 }
 
+/* 沒庫存時的 ▶ 徽章：稍微縮小三角、微調位置置中好看 */
+.btn-ghost .count.ad {
+  font-size: 9px;
+  padding-left: 1px;
+}
+
 .btn-ghost.armed {
   background: var(--accent);
   animation: armed-pulse 0.9s ease-in-out infinite;

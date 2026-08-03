@@ -51,6 +51,7 @@ export const STR = {
   hammer: 'Hammer (smash one planet)',
   hammerHint: '🔨 Tap a planet to smash it (tap empty space to cancel)',
   hammerHintMini: '🔨❓',
+  hammerAdPrompt: '▶ Watch a short ad for a 🔨 — tap again',
   tutorial: '👆 Drag to aim · release to drop<br>Matching planets merge!',
 }
 
