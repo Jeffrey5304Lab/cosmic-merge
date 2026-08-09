@@ -64,13 +64,14 @@ npx capacitor-assets generate --iconBackgroundColor '#F4E9D7' --splashBackground
 - **安全區**：CSS 已用 `env(safe-area-inset-*)` + `viewport-fit=cover`，瀏海/home indicator 不會壓到內容。
 - **Service Worker**：原生環境資產為本地，SW 影響不大；若發現快取怪異可在原生 build 關閉註冊。
 
-## 6. ⚠️ 上架前必做（v1 無廣告）
+## 6. ⚠️ 上架前必做
 
-- [x] ~~移除 Mock 廣告~~：已改用 `DirectGrantProvider`——復活/錘子直接給獎勵、不跳假廣告。
-  `AdProvider` 介面保留，之後接 AdMob 只需換掉 export。
-- [x] ~~隱私政策草稿~~：已建 `public/privacy.html` → 部署後公開於
-  `https://jeffrey5304lab.github.io/cosmic-merge/privacy.html`（送審填這個 URL）。
-  聯絡信箱已填為 `mngutoysports@gmail.com`。
+> ⚠️ **此節部分內容已過時**。v1 **已改成有廣告**（AdMob 獎勵廣告，見 `src/ads.ts`）。
+> iOS 送審完整清單（文案／隱私問卷／分級／步驟）請看 **`docs/IOS_SUBMISSION.md`**。
+
+- [x] 廣告：原生 App 走 **AdMob 獎勵廣告**（復活／榔頭）；Web 版維持 `DirectGrantProvider` 直接授予。
+- [x] 隱私政策：`public/privacy.html`（已揭露 AdMob + ATT）→
+  `https://jeffrey5304lab.github.io/cosmic-merge/privacy.html`。聯絡信箱 `mngutoysports@gmail.com`。
 - [ ] **資料安全表單**：App Store 隱私標籤 / Google Play Data Safety 要勾選收集項目。
 - [ ] **名稱查重**：商店搜尋「Cosmic Merge」確認無撞名 / 商標問題。
 - [ ] **內容分級**：填寫問卷（本作預期 4+/Everyone）。
