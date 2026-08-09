@@ -136,12 +136,51 @@ within the app」；ATT 已實作，符合「only after obtaining permission」�
 
 ---
 
-## 6. 送審前快速檢查
+## 6. App Review Information（送審表單「App Review Information → Notes」直接貼）
+
+> App Store Connect 送審頁最下方的 **Notes** 欄。寫清楚「不用登入、廣告是選配、ATT 何時跳」
+> 能明顯降低被退件率。**Sign-In required = No**（本作沒有帳號系統）。
+
+```
+Cosmic Merge is a single-player, offline-friendly "merge" puzzle. No account or
+login is required — you can play immediately.
+
+REWARDED ADS (Google AdMob)
+- Ads are entirely OPTIONAL and never block gameplay. Two spots only:
+  1) "Continue Playing" on the game-over screen (revive), and
+  2) the hammer tool when you are out of hammers.
+- Both are clearly labeled "Watch a short ad …" and only play after a tap.
+- Nothing in the game is locked behind watching an ad.
+
+APP TRACKING TRANSPARENCY
+- The ATT permission prompt is requested lazily — only the first time the
+  player chooses to watch a rewarded ad — not at launch. Declining is fully
+  supported; ads then serve non-personalized.
+
+OPTIONAL LEADERBOARD
+- On the game-over screen the player may optionally submit a self-chosen
+  display name + a self-selected country (from a list, not GPS/IP) to a public
+  leaderboard. It is optional and requires no account.
+
+HOW TO REACH THE RESULTS / AD FLOW FOR REVIEW
+- Drop planets by tapping; merge two matching planets to grow them. Let the
+  stack reach the top dashed line to trigger the game-over card, where the
+  "Continue Playing" rewarded-ad button appears.
+
+Contact: mngutoysports@gmail.com
+```
+
+- **Sign-In required**：**No**（無帳號系統，審核不需測試帳號）
+- **Contact info**：填你的名字 + `mngutoysports@gmail.com` + 電話
+
+---
+
+## 7. 送審前快速檢查
 
 - [ ] Apple Developer 帳號已生效、Xcode 已選 Team
 - [ ] App Store Connect 已建 App（Bundle ID 對上）
 - [ ] `npm run cap:ios:release` → Archive → Upload 成功、TestFlight 能跑
-- [ ] 貼上第 2 節文案、第 3 節隱私、第 4 節分級
+- [ ] 貼上第 2 節文案、第 3 節隱私、第 4 節分級、第 6 節 Review notes
 - [ ] 上傳 `screenshots/appstore-6.9/`（6.9″ 必填；6.5″ 可留白，Apple 會自動縮放沿用）
 - [ ] 商店搜「Cosmic Merge」確認無撞名 / 商標問題
 - [ ] Submit for Review
