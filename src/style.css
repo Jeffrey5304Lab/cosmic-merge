@@ -512,8 +512,12 @@ body {
 }
 
 .best-badge-medal {
-  font-size: 18px;
-  line-height: 1;
+  line-height: 0;
+}
+
+.best-badge-medal .ic-medal {
+  width: 24px;
+  height: 24px;
 }
 
 .best-badge-score {
@@ -525,13 +529,26 @@ body {
 }
 
 .best-badge-tier {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   font-size: 11px;
   font-weight: 700;
   color: var(--ink-soft);
+  max-width: 100%;
+}
+
+.best-badge-tier span {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+}
+
+.planet-ico {
+  width: 22px;
+  height: 22px;
+  flex: none;
 }
 
 .best-badge.is-current {
@@ -597,6 +614,31 @@ body {
   border: 1.5px solid var(--ink);
 }
 
+.b-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.b-left > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.b-rank {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-width: 18px;
+}
+
+.b-rank .ic-medal {
+  width: 17px;
+  height: 17px;
+}
+
 .board li .b-score {
   font-family: var(--font-display);
   color: var(--accent);
@@ -632,6 +674,28 @@ body {
 .btn:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--ink);
+}
+
+/* ── 手繪 SVG 圖示（取代結算卡 emoji） ── */
+.ic {
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+}
+
+.btn-submit,
+#share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+}
+
+.revive-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
 }
 
 .overlay-actions {

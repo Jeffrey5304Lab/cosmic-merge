@@ -6,6 +6,7 @@ import { drawPlanet } from './render'
 import { isMuted, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
+import { ICON_CAMERA, ICON_CHECK, ICON_PLAY, ICON_TROPHY, medalSvg } from './icons'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
 import { loadStats, recordCombo, recordDiscovery, recordGame, recordMerge, recordSupernova, undoGameCount } from './stats'
@@ -160,6 +161,21 @@ function showCombo(multiplier: number) {
 /** 分數加千分位（2334 → 2,334），讓大數字好讀 */
 const fmt = (n: number) => n.toLocaleString('en-US')
 
+/** 按鈕文案前面加一個手繪 SVG 圖示（icon 與 text 皆為信任字串，無 XSS） */
+const withIcon = (icon: string, text: string) => `${icon}<span class="btn-tx">${text}</span>`
+
+/** 把某階星球用「遊戲本體的畫法」畫進小 canvas 當圖示（比 emoji 更貼合美術） */
+function drawPlanetIcon(tier: number): HTMLCanvasElement {
+  const c = document.createElement('canvas')
+  c.className = 'planet-ico'
+  c.width = 52
+  c.height = 52
+  const g = c.getContext('2d')
+  const def = TIERS[tier]
+  if (g && def) drawPlanet(g, def, 26, 26, 0, Math.min(1, 22 / def.radius))
+  return c
+}
+
 /* ── 分數跳動 ── */
 function popValue(el: HTMLElement, value: number) {
   const text = fmt(value)
@@ -175,9 +191,13 @@ function popValue(el: HTMLElement, value: number) {
 let lastResult: { score: number; best: number; maxTier: number } | null = null
 let lastRank: number | null = null
 
-/** 名次前綴：前三名給獎牌，其餘給數字 */
-function medal(i: number): string {
-  return i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`
+/** 名次節點：前三名給手繪獎牌 SVG，其餘給數字（回傳可 append 的 span） */
+function rankNode(i: number): HTMLSpanElement {
+  const s = document.createElement('span')
+  s.className = 'b-rank'
+  if (i < 3) s.innerHTML = medalSvg(i + 1)
+  else s.textContent = `${i + 1}.`
+  return s
 }
 
 /** 國旗前綴（含尾隨空格）；無國家時回空字串 */
@@ -202,7 +222,10 @@ function renderLeaderboard() {
     const li = document.createElement('li')
     if (lastRank !== null && i === lastRank - 1) li.className = 'me'
     const left = document.createElement('span')
-    left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
+    left.className = 'b-left'
+    const nm = document.createElement('span')
+    nm.textContent = `${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
+    left.append(rankNode(i), nm)
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = fmt(e.score)
@@ -244,7 +267,10 @@ function renderBoardRows() {
     const li = document.createElement('li')
     if (e === own) li.className = 'me' // 樂觀插入的本局那筆
     const left = document.createElement('span')
-    left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name}`
+    left.className = 'b-left'
+    const nm = document.createElement('span')
+    nm.textContent = `${flagPrefix(e.country)}${e.name}`
+    left.append(rankNode(i), nm)
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = fmt(e.score)
@@ -314,13 +340,15 @@ function renderBestWall() {
     if (isCurrent) badge.classList.add('is-current')
     const medalEl = document.createElement('span')
     medalEl.className = 'best-badge-medal'
-    medalEl.textContent = medal(i)
+    medalEl.innerHTML = medalSvg(i + 1)
     const scoreEl = document.createElement('span')
     scoreEl.className = 'best-badge-score'
     scoreEl.textContent = fmt(e.score)
     const tierEl = document.createElement('span')
     tierEl.className = 'best-badge-tier'
-    tierEl.textContent = `${TIERS[e.maxTier]?.emoji ?? ''} ${isCurrent ? STR.bestNow : planetName(e.maxTier)}`
+    const nameEl = document.createElement('span')
+    nameEl.textContent = isCurrent ? STR.bestNow : planetName(e.maxTier)
+    tierEl.append(drawPlanetIcon(e.maxTier), nameEl)
     badge.append(medalEl, scoreEl, tierEl)
     bestWallRowEl.appendChild(badge)
   })
@@ -350,7 +378,7 @@ function renderGameOver() {
 function resetSubmitButton(score: number) {
   submitBtn.classList.toggle('hidden', score <= 0)
   submitBtn.disabled = false
-  submitBtn.textContent = STR.submitScore
+  submitBtn.innerHTML = withIcon(ICON_TROPHY, STR.submitScore)
 }
 
 function todayKey(): string {
@@ -452,7 +480,7 @@ function setReviveLabel(state: 'default' | 'loading' | 'retry') {
     loading: [STR.reviveLoading, STR.reviveLoadingSub],
     retry: [STR.reviveRetry, STR.reviveRetrySub],
   }[state]
-  main.textContent = label[0]
+  main.innerHTML = (state === 'default' ? ICON_PLAY : '') + `<span class="btn-tx">${label[0]}</span>`
   sub.textContent = label[1]
 }
 
@@ -596,12 +624,13 @@ hammerBtn.addEventListener('click', async () => {
 })
 
 const shareBtn = $<HTMLButtonElement>('share')
+shareBtn.innerHTML = withIcon(ICON_CAMERA, STR.share)
 shareBtn.addEventListener('click', async () => {
   if (!lastResult) return
   const outcome = await shareCard(lastResult.score, lastResult.maxTier)
   if (outcome !== 'failed') {
-    shareBtn.textContent = STR.shareDone
-    setTimeout(() => (shareBtn.textContent = STR.share), 1800)
+    shareBtn.innerHTML = withIcon(ICON_CHECK, STR.shareDone)
+    setTimeout(() => (shareBtn.innerHTML = withIcon(ICON_CAMERA, STR.share)), 1800)
   }
 })
 
@@ -610,7 +639,7 @@ const submitBtn = $<HTMLButtonElement>('submit-score')
 submitBtn.addEventListener('click', () => {
   flushPendingScore() // 用此刻填好的名字送出（idempotent：Play Again 再按不會重送）
   submitBtn.disabled = true
-  submitBtn.textContent = STR.submitScoreDone
+  submitBtn.innerHTML = withIcon(ICON_CHECK, STR.submitScoreDone)
   // 送出後回抓真榜；自己那列由 ownPendingEntry（綁 lastResult）撐著不會閃掉
   if (REMOTE_ENABLED) void renderGlobalLeaderboard()
 })
@@ -670,7 +699,7 @@ function applyStrings() {
   $('label-bestmerge').textContent = STR.bestMerge
   tabEvolutionBtn.textContent = STR.evolution
   tabStarsBtn.textContent = STR.starsTab
-  shareBtn.textContent = STR.share
+  shareBtn.innerHTML = withIcon(ICON_CAMERA, STR.share)
   $<HTMLButtonElement>('restart').textContent = STR.restart
   muteBtn.setAttribute('aria-label', STR.mute)
   setReviveLabel('default')
@@ -871,7 +900,10 @@ function fillBoard(
     const li = document.createElement('li')
     if (me && e.name === me) li.className = 'me' // 高亮自己（同名都算）
     const left = document.createElement('span')
-    left.textContent = `${medal(i)} ${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
+    left.className = 'b-left'
+    const nm = document.createElement('span')
+    nm.textContent = `${flagPrefix(e.country)}${e.name || planetName(e.maxTier)}`
+    left.append(rankNode(i), nm)
     const right = document.createElement('span')
     right.className = 'b-score'
     right.textContent = fmt(e.score)
