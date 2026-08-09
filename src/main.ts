@@ -40,6 +40,9 @@ const overScoreEl = $<HTMLParagraphElement>('over-score')
 const overSubEl = $<HTMLParagraphElement>('over-sub')
 const overRankEl = $<HTMLParagraphElement>('over-rank')
 const overEmojiEl = $<HTMLParagraphElement>('over-emoji')
+const bestWallEl = $<HTMLDivElement>('best-wall')
+const bestWallTitleEl = $<HTMLSpanElement>('best-wall-title')
+const bestWallRowEl = $<HTMLDivElement>('best-wall-row')
 const muteBtn = $<HTMLButtonElement>('mute')
 const nameInput = $<HTMLInputElement>('name-input')
 
@@ -289,6 +292,41 @@ function showLocalRank(score: number) {
   setRankLine(gap === null ? STR.rankTopLocal : `${STR.rankLocal(lastRank)} · ${STR.rankGap(gap)}`)
 }
 
+/**
+ * 個人歷史前 3 名徽章牆（B2）。本地榜每筆＝一場遊戲（復活會 removeScore 撤回中途那筆），
+ * 所以直接取前 3 就是玩家自己的最佳紀錄。剛結束這局若上榜會高亮成「NOW」。
+ * 只在有全球榜（Supabase）時顯示——離線時下方 TOP SCORES 本身就是個人榜，再放會重複。
+ */
+function renderBestWall() {
+  const top = loadLeaderboard()
+    .filter(e => e.score > 0)
+    .slice(0, 3)
+  if (!REMOTE_ENABLED || top.length === 0) {
+    bestWallEl.classList.add('hidden')
+    return
+  }
+  bestWallTitleEl.textContent = STR.yourBest
+  bestWallRowEl.innerHTML = ''
+  top.forEach((e, i) => {
+    const badge = document.createElement('div')
+    badge.className = 'best-badge'
+    const isCurrent = !!(lastEntry && lastEntry.id && e.id === lastEntry.id)
+    if (isCurrent) badge.classList.add('is-current')
+    const medalEl = document.createElement('span')
+    medalEl.className = 'best-badge-medal'
+    medalEl.textContent = medal(i)
+    const scoreEl = document.createElement('span')
+    scoreEl.className = 'best-badge-score'
+    scoreEl.textContent = fmt(e.score)
+    const tierEl = document.createElement('span')
+    tierEl.className = 'best-badge-tier'
+    tierEl.textContent = `${TIERS[e.maxTier]?.emoji ?? ''} ${isCurrent ? STR.bestNow : planetName(e.maxTier)}`
+    badge.append(medalEl, scoreEl, tierEl)
+    bestWallRowEl.appendChild(badge)
+  })
+  bestWallEl.classList.remove('hidden')
+}
+
 function renderGameOver() {
   if (!lastResult) return
   const { score, best, maxTier } = lastResult
@@ -298,6 +336,7 @@ function renderGameOver() {
   overEmojiEl.textContent = maxTier >= 11 ? '🌟' : maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
   const sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
   overSubEl.textContent = sub
+  renderBestWall()
   if (REMOTE_ENABLED) {
     setRankLine(null) // 全球名次稍後非同步補上
     resetSubmitButton(score)

@@ -25,6 +25,8 @@ export const STR = {
   shareDone: '✓ Card saved',
   leaderboard: 'TOP SCORES',
   globalLeaderboard: 'GLOBAL TOP SCORES',
+  yourBest: 'YOUR BEST RUNS',
+  bestNow: 'NOW',
   offlineLeaderboard: '📴 OFFLINE · YOUR SCORES',
   noScores: 'No scores yet — set the first record!',
   rankGlobal: (rank: number) => `🌍 Global rank #${rank}`,

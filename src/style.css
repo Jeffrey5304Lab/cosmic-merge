@@ -478,6 +478,90 @@ body {
   border-color: var(--accent);
 }
 
+/* ── 個人前三名徽章牆（B2） ─────────── */
+.best-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.best-wall.hidden {
+  display: none;
+}
+
+.best-wall-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+}
+
+.best-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 0;
+  max-width: 96px;
+  padding: 8px 6px;
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.best-badge-medal {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.best-badge-score {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.best-badge-tier {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.best-badge.is-current {
+  background: var(--honey);
+  animation: best-pop 0.4s ease-out;
+}
+
+.best-badge.is-current .best-badge-score,
+.best-badge.is-current .best-badge-tier {
+  color: var(--ink);
+}
+
+@keyframes best-pop {
+  0% {
+    transform: scale(0.82);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .best-badge.is-current {
+    animation: none;
+  }
+}
+
 /* ── 排行榜 ───────────────────────── */
 .board {
   display: flex;
