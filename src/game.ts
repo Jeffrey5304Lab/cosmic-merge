@@ -526,7 +526,7 @@ export class Game {
       const sy = Math.min(Math.max(bh.y, def.radius + 40), BOARD.height - def.radius - 2)
       this.spawnPlanet(newTier, sx, sy, true)
       this.maxTierReached = Math.max(this.maxTierReached, newTier)
-      this.particles.float(sx, sy - def.radius - 18, `⭐ ${def.name} discovered!`, '#FFE9B0')
+      this.particles.float(sx, sy - def.radius - 18, `${def.name} discovered!`, '#FFE9B0')
     }
 
     this.cb.onScore(this.score, this.best, this.maxTierReached)

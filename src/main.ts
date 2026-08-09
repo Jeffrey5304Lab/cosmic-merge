@@ -6,7 +6,23 @@ import { drawPlanet } from './render'
 import { isMuted, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
-import { ICON_CAMERA, ICON_CHECK, ICON_PLAY, ICON_TROPHY, medalSvg } from './icons'
+import {
+  ICON_BLACKHOLE,
+  ICON_CAMERA,
+  ICON_CHECK,
+  ICON_CROWN,
+  ICON_FLAME,
+  ICON_GIFT,
+  ICON_GLOBE,
+  ICON_HAMMER,
+  ICON_HAND,
+  ICON_OFFLINE,
+  ICON_PLAY,
+  ICON_SPARKLE,
+  ICON_STAR,
+  ICON_TROPHY,
+  medalSvg,
+} from './icons'
 import { addScore, loadLeaderboard, removeScore, type LeaderboardEntry } from './leaderboard'
 import { COUNTRY_CODES, countryName, flagEmoji, guessCountry } from './country'
 import { loadStats, recordCombo, recordDiscovery, recordGame, recordMerge, recordSupernova, undoGameCount } from './stats'
@@ -138,7 +154,7 @@ function renderBestMerge(tier: number) {
 const discoverEl = $<HTMLDivElement>('discover')
 let discoverTimer = 0
 function showDiscoverBanner(name: string) {
-  discoverEl.textContent = STR.newStarBanner(name)
+  discoverEl.innerHTML = ICON_STAR + STR.newStarBanner(name)
   discoverEl.classList.remove('show')
   void discoverEl.offsetWidth // 重新觸發動畫
   discoverEl.classList.add('show')
@@ -165,14 +181,14 @@ const fmt = (n: number) => n.toLocaleString('en-US')
 const withIcon = (icon: string, text: string) => `${icon}<span class="btn-tx">${text}</span>`
 
 /** 把某階星球用「遊戲本體的畫法」畫進小 canvas 當圖示（比 emoji 更貼合美術） */
-function drawPlanetIcon(tier: number): HTMLCanvasElement {
+function drawPlanetIcon(tier: number, size = 52): HTMLCanvasElement {
   const c = document.createElement('canvas')
   c.className = 'planet-ico'
-  c.width = 52
-  c.height = 52
+  c.width = size
+  c.height = size
   const g = c.getContext('2d')
   const def = TIERS[tier]
-  if (g && def) drawPlanet(g, def, 26, 26, 0, Math.min(1, 22 / def.radius))
+  if (g && def) drawPlanet(g, def, size / 2, size / 2, 0, Math.min(1, (size * 0.42) / def.radius))
   return c
 }
 
@@ -290,9 +306,9 @@ async function renderGlobalLeaderboard() {
   renderBoardRows()
 }
 
-/** 結算的名次／差距那行（再 N 分超越上一名）；text=null 時隱藏 */
-function setRankLine(text: string | null) {
-  overRankEl.textContent = text ?? ''
+/** 結算的名次／差距那行（再 N 分超越上一名）；text=null 時隱藏。icon 為手繪前綴圖示 */
+function setRankLine(text: string | null, icon = '') {
+  overRankEl.innerHTML = text ? icon + text : ''
   overRankEl.classList.toggle('hidden', !text)
 }
 
@@ -302,11 +318,8 @@ async function showGlobalRank(score: number) {
   const info = await fetchRank(score)
   if (reqId !== rankRequestId) return // 較舊的請求晚回：放棄
   if (!info) return setRankLine(null)
-  setRankLine(
-    info.gap === null || info.rank <= 1
-      ? STR.rankTop
-      : `${STR.rankGlobal(info.rank)} · ${STR.rankGap(info.gap)}`,
-  )
+  if (info.gap === null || info.rank <= 1) setRankLine(STR.rankTop, ICON_CROWN)
+  else setRankLine(`${STR.rankGlobal(info.rank)} · ${STR.rankGap(info.gap)}`, ICON_GLOBE)
 }
 
 /** 本地榜的名次／差距（離線或未設定 Supabase 時） */
@@ -315,7 +328,8 @@ function showLocalRank(score: number) {
   const board = loadLeaderboard()
   const above = lastRank >= 2 ? board[lastRank - 2] : null
   const gap = above ? above.score - score : null
-  setRankLine(gap === null ? STR.rankTopLocal : `${STR.rankLocal(lastRank)} · ${STR.rankGap(gap)}`)
+  if (gap === null) setRankLine(STR.rankTopLocal, ICON_CROWN)
+  else setRankLine(`${STR.rankLocal(lastRank)} · ${STR.rankGap(gap)}`)
 }
 
 /**
@@ -361,9 +375,9 @@ function renderGameOver() {
   const name = planetName(maxTier)
   overTitleEl.textContent = STR.overTitle
   overScoreEl.innerHTML = STR.overScore(score)
-  overEmojiEl.textContent = maxTier >= 11 ? '🌟' : maxTier >= 10 ? '☀️' : maxTier >= 8 ? '🪐' : '💫'
-  const sub = score >= best && score > 0 ? STR.overNewRecord(name) : STR.overNormal(name, best)
-  overSubEl.textContent = sub
+  overEmojiEl.replaceChildren(drawPlanetIcon(maxTier, 108)) // 用本體畫法顯示本局最高星球，取代 emoji
+  const isRecord = score >= best && score > 0
+  overSubEl.innerHTML = (isRecord ? ICON_TROPHY : '') + (isRecord ? STR.overNewRecord(name) : STR.overNormal(name, best))
   renderBestWall()
   if (REMOTE_ENABLED) {
     setRankLine(null) // 全球名次稍後非同步補上
@@ -511,7 +525,7 @@ reviveBtn.addEventListener('click', async () => {
   overlayEl.classList.add('hidden')
   setReviveLabel('default') // 還原，下局結算才顯示正確文字
   // 卡片已關、玩家視線回到棋盤：用 toast 說明「頂端已清空」發生了什麼
-  toastQueue.push(`<span class="ti">✨</span>${STR.reviveDone}`)
+  toastQueue.push(`<span class="ti">${ICON_SPARKLE}</span>${STR.reviveDone}`)
   pumpToasts()
 })
 
@@ -524,8 +538,9 @@ let smashMode = false
 
 function refreshHammerCount() {
   const n = getHammers()
-  // 沒庫存時徽章顯示 ▶（提示「點我看廣告換一支」），而非死板的 0
-  hammerCountEl.textContent = n > 0 ? String(n) : '▶'
+  // 沒庫存時徽章顯示手繪 play 圖示（提示「點我看廣告換一支」），而非死板的 0
+  if (n > 0) hammerCountEl.textContent = String(n)
+  else hammerCountEl.innerHTML = ICON_PLAY
   hammerCountEl.classList.toggle('ad', n === 0)
 }
 refillFreeHammers() // 開遊戲即補到免費樓地板
@@ -553,11 +568,11 @@ function hammerHintSeen(): boolean {
 function showHammerHint() {
   hintEl.classList.remove('hidden')
   if (hammerHintSeen()) {
-    hintTextEl.textContent = STR.hammerHintMini
+    hintTextEl.innerHTML = ICON_HAMMER + STR.hammerHintMini
     hintEl.classList.add('mini', 'clickable')
     return
   }
-  hintTextEl.textContent = STR.hammerHint
+  hintTextEl.innerHTML = ICON_HAMMER + STR.hammerHint
   hintEl.classList.remove('mini', 'clickable')
   try {
     localStorage.setItem(HAMMER_HINT_KEY, '1')
@@ -569,11 +584,12 @@ function showHammerHint() {
 // 迷你提示點一下展開完整說明（僅本次進入敲擊模式生效）
 hintEl.addEventListener('click', () => {
   if (!hintEl.classList.contains('mini')) return
-  hintTextEl.textContent = STR.hammerHint
+  hintTextEl.innerHTML = ICON_HAMMER + STR.hammerHint
   hintEl.classList.remove('mini', 'clickable')
 })
 
 function enterSmashMode() {
+  dismissTutorial() // 錘子提示與教學卡同一個位置，先收掉教學卡免得兩張重疊
   smashMode = true
   hammerBtn.classList.add('armed')
   showHammerHint()
@@ -584,9 +600,10 @@ let hammerAdArmed = false
 let hammerAdTimer = 0
 
 function armHammerAd() {
+  dismissTutorial() // 同上：這個提示也用教學卡的位置
   hammerAdArmed = true
   hintEl.classList.remove('hidden', 'mini', 'clickable')
-  hintTextEl.textContent = STR.hammerAdPrompt
+  hintTextEl.innerHTML = ICON_PLAY + STR.hammerAdPrompt
   window.clearTimeout(hammerAdTimer)
   hammerAdTimer = window.setTimeout(disarmHammerAd, 4000) // 4 秒沒確認就取消，不留殘影
 }
@@ -706,7 +723,9 @@ function applyStrings() {
   hammerBtn.setAttribute('aria-label', STR.hammer)
   nextNameEl.textContent = planetName(lastNextTier)
   renderBestMerge(bestMergeTier)
-  $('tutorial-text').innerHTML = STR.tutorial
+  $('tutorial-text').innerHTML = ICON_HAND + STR.tutorial
+  $('lb-tab-global').innerHTML = ICON_GLOBE + ' Global'
+  $('daily-gift').innerHTML = ICON_GIFT
   renderChart()
   renderGameOver()
 }
@@ -841,7 +860,7 @@ applyStrings()
 window.addEventListener('pointerdown', () => startMusic(), { once: true })
 window.addEventListener('keydown', () => startMusic(), { once: true })
 
-/* ── 廣告 SDK 預熱：原生 App 開場就先跳追蹤授權＋初始化，玩家第一次點復活/榔頭才不用等 ── */
+/* ── 廣告 SDK 預熱：原生 App 開場就先初始化 SDK（ATT 延到首次看廣告才問，見 ads.ts） ── */
 void ads.warmup?.()
 
 /* ── PWA 離線（只在正式版 Web 註冊；Capacitor 原生 App 資產為本地、不需 SW 且避免快取怪異） ── */
@@ -929,7 +948,7 @@ async function renderModalLeaderboard() {
   if (reqId !== lbRequestId) return // 舊請求慢回：放棄，避免覆蓋新榜
   if (entries === null) {
     // 遠端連不上／逾時：退回本地榜，別讓玩家對著空白或轉圈的畫面卡住
-    lbTitleEl.textContent = STR.offlineLeaderboard
+    lbTitleEl.innerHTML = ICON_OFFLINE + STR.offlineLeaderboard
     fillBoard(lbListEl, loadLeaderboard().slice(0, 10))
     return
   }
@@ -1013,7 +1032,7 @@ function renderAchievements() {
     li.innerHTML =
       `<span class="ico">${a.icon}</span>` +
       `<span class="meta"><span class="nm"></span><span class="ds"></span></span>` +
-      (got ? '<span class="done">✓</span>' : '')
+      (got ? `<span class="done">${ICON_CHECK}</span>` : '')
     li.querySelector('.nm')!.textContent = a.name
     li.querySelector('.ds')!.textContent = a.desc
     achvListEl.appendChild(li)
@@ -1045,9 +1064,9 @@ const dailyClaimBtn = $<HTMLButtonElement>('daily-claim')
 function maybeShowDaily() {
   const preview = peekDaily()
   if (!preview) return // 今天已領過
-  dailyStreakEl.textContent = STR.dailyStreak(preview.streak)
-  dailyRewardEl.textContent = STR.dailyReward(preview.hammers)
-  dailyMilestoneEl.textContent = STR.dailyMilestone
+  dailyStreakEl.innerHTML = ICON_FLAME + STR.dailyStreak(preview.streak)
+  dailyRewardEl.innerHTML = ICON_HAMMER + STR.dailyReward(preview.hammers)
+  dailyMilestoneEl.innerHTML = ICON_SPARKLE + STR.dailyMilestone
   dailyMilestoneEl.classList.toggle('hidden', !preview.milestone)
   dailyClaimBtn.textContent = STR.dailyClaim
   setModal('daily')
@@ -1059,7 +1078,7 @@ dailyClaimBtn.addEventListener('click', () => {
   if (!reward) return // 保險：已被領走
   addHammer(reward.hammers)
   refreshHammerCount()
-  toastQueue.push(`<span class="ti">🔨</span>${STR.dailyClaimed(reward.hammers)}`)
+  toastQueue.push(`<span class="ti">${ICON_HAMMER}</span>${STR.dailyClaimed(reward.hammers)}`)
   pumpToasts()
 })
 dailyModal.addEventListener('click', (e) => {
@@ -1103,7 +1122,7 @@ function maybeShowBlackHoleGoal() {
   } catch {
     /* 私密模式：至少提示一次，忽略寫入失敗 */
   }
-  toastQueue.push(`<span class="ti">🕳️</span>${STR.goalBlackHole}`)
+  toastQueue.push(`<span class="ti">${ICON_BLACKHOLE}</span>${STR.goalBlackHole}`)
   pumpToasts()
 }
 

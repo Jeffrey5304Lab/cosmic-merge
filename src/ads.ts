@@ -45,19 +45,35 @@ class AdMobProvider implements AdProvider {
     return this.initDone
   }
 
-  /** App 啟動時預熱：先跳 iOS 14.5+ 的追蹤授權，SDK 也先初始化好，第一次看廣告才不會多等 */
+  private trackingAsked = false
+
+  /**
+   * iOS 14.5+ 追蹤授權（ATT）：延到玩家「第一次真的要看廣告」時才問。
+   * 開場就問會跟每日獎勵彈窗擠在一起、也沒情境；有情境地問同意率更高。
+   */
+  private async ensureTracking(): Promise<void> {
+    if (this.trackingAsked) return
+    this.trackingAsked = true
+    try {
+      await AdMob.requestTrackingAuthorization()
+    } catch {
+      // 拒絕追蹤或平台不支援：忽略，AdMob 會自動退回非個人化廣告
+    }
+  }
+
+  /** App 啟動時預熱：只先初始化 SDK（不跳追蹤授權），讓第一次看廣告不用等 SDK 載入。 */
   async warmup(): Promise<void> {
     try {
       await this.ensureInit()
-      await AdMob.requestTrackingAuthorization()
     } catch {
-      // 使用者拒絕追蹤或平台不支援：忽略，AdMob 會自動退回非個人化廣告
+      // 初始化失敗：忽略，showRewarded 會再試一次
     }
   }
 
   async showRewarded(_slot: AdSlot): Promise<boolean> {
     try {
       await this.ensureInit()
+      await this.ensureTracking() // 第一次看廣告的當下才問 ATT（延後授權）
       let earned = false
       // 一定要在 show 之前掛 listener：獎勵是用事件回報，showRewardVideoAd() 的
       // resolve 只代表「廣告流程跑完」（看到一半關掉也會 resolve），不能單獨拿來判斷。

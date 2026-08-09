@@ -331,13 +331,19 @@ body {
   color: var(--ink);
   pointer-events: none;
   animation: tutorial-bob 2s ease-in-out infinite;
-  transition: opacity 0.4s;
+  transition:
+    opacity 0.4s,
+    visibility 0s;
   box-shadow: 0 4px 0 rgba(59, 48, 36, 0.3);
   max-width: 80%;
 }
 
 .tutorial.hidden {
   opacity: 0;
+  visibility: hidden; /* 淡出後徹底退場：不再擋點擊、不再跑 bob 動畫 */
+  transition:
+    opacity 0.4s,
+    visibility 0s 0.4s;
 }
 
 /* 錘子提示迷你模式：看過一次後只顯示小圖示，點擊展開完整說明 */
@@ -407,6 +413,12 @@ body {
 
 .overlay-emoji {
   font-size: 44px;
+  line-height: 0;
+}
+
+.overlay-emoji .planet-ico {
+  width: 56px;
+  height: 56px;
 }
 
 .overlay-card h2 {
@@ -681,6 +693,23 @@ body {
   width: 1.05em;
   height: 1.05em;
   flex: none;
+  vertical-align: -0.15em; /* 內文行內圖示對齊；flex 按鈕會忽略此值 */
+}
+
+/* 行內圖示 + 文字（提示、橫幅、名次、每日獎勵）留一點間距 */
+.tutorial .ic,
+.discover .ic,
+.overlay-rank .ic,
+#daily-streak .ic,
+#daily-reward .ic,
+#daily-milestone .ic {
+  margin-right: 0.3em;
+}
+
+.btn-ghost .count .ic {
+  width: 11px;
+  height: 11px;
+  vertical-align: 0;
 }
 
 .btn-submit,
