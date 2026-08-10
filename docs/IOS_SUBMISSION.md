@@ -47,17 +47,19 @@
 
 ## 2. 商店文案（可直接貼）
 
-- **App 名稱（≤30 字）**：`Cosmic Merge`
-- **副標 Subtitle（≤30 字）**：`Cozy planet-merge puzzle`
+- **App 名稱（≤30 字）**：`Cosmic Merge: Planet Puzzle`
+  （桌面顯示名仍是 `Cosmic Merge`；商店標題加關鍵字避免撞名 + 提升搜尋，2026-08-10 定案）
+- **副標 Subtitle（≤30 字）**：`Drop planets, merge worlds`
 - **分類**：Primary = **Games**；子分類 **Puzzle** + **Casual**
 - **關鍵字（≤100 字，逗號分隔不留空白）**：
-  `merge,planet,puzzle,suika,watermelon,space,cozy,relax,idle,physics,drop,combo,galaxy,star`
+  `suika,watermelon,space,galaxy,drop,combo,star,relax,idle,physics,casual,ball,fruit`
+  （刻意不含 merge/planet/puzzle/cosmic —— 那些已在標題/副標吃到更高權重，不重複才不浪費格子）
 - **宣傳文字 Promotional Text（≤170 字，可隨時改不需審核）**：
   `Drop planets, merge matching worlds, and grow from a tiny meteor all the way to the Sun. Cozy hand-drawn art, chill lo-fi music, and a global leaderboard.`
 - **Support URL**：`https://jeffrey5304lab.github.io/cosmic-merge/`
 - **Marketing URL（選填）**：`https://jeffrey5304lab.github.io/cosmic-merge/`
 - **Privacy Policy URL**：`https://jeffrey5304lab.github.io/cosmic-merge/privacy.html`
-- **版權 Copyright**：`2026 Cosmic Merge`
+- **版權 Copyright**：`2026 Jieway Chou`（權利人本名；版權欄標示所有權人，不需與商店名一致，2026-08-10 定案）
 
 ### 描述 Description（≤4000 字）
 
@@ -167,11 +169,12 @@ HOW TO REACH THE RESULTS / AD FLOW FOR REVIEW
   stack reach the top dashed line to trigger the game-over card, where the
   "Continue Playing" rewarded-ad button appears.
 
-Contact: mngutoysports@gmail.com
+Contact: jeffrey5304@gmail.com
 ```
 
 - **Sign-In required**：**No**（無帳號系統，審核不需測試帳號）
-- **Contact info**：填你的名字 + `mngutoysports@gmail.com` + 電話
+- **Contact info**：填你的名字 + `jeffrey5304@gmail.com` + 電話（此聯絡資訊僅 Apple 審查人員可見，非公開）
+  - 註：對外公開的隱私政策頁（public/privacy.html）仍顯示 `mngutoysports@gmail.com`，那是使用者/歐盟看的公開聯絡信箱，與此審查聯絡信箱可不同；如要一致需改 code 再重新部署。
 
 ---
 
