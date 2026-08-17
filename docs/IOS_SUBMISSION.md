@@ -187,3 +187,107 @@ Contact: jeffrey5304@gmail.com
 - [ ] 上傳 `screenshots/appstore-6.9/`（6.9″ 必填；6.5″ 可留白，Apple 會自動縮放沿用）
 - [ ] 商店搜「Cosmic Merge」確認無撞名 / 商標問題
 - [ ] Submit for Review
+
+---
+
+## 8. 被退件回覆：Guideline 2.1 – Information Needed（2026-08-14）
+
+> 首次送審後收到 **Guideline 2.1 - Information Needed - New App Submission**。
+> 這 **不是** 「App 有問題」的退件，而是審核員要更多資訊才能繼續。**不需重新打包**，
+> 只要在 **App Store Connect → 回覆 App 審查** 用文字回答 7 題 + **附一段實機錄影**，
+> 並把同一段文字貼進 **App Review Information → Notes** 供之後版本用。
+
+**唯一要動手的事：用實體 iPhone 錄一段畫面影片（第 1 題）。** 錄約 60–90 秒：
+1. 從主畫面圖示啟動 App。
+2. 丟幾顆星球、展示兩顆合併。
+3. 點榔頭 → 沒榔頭時再點一次 → 出現「看廣告」提示 → 播獎勵廣告 →**這裡會跳 ATT 追蹤授權視窗**（必須錄到）。
+4. 遊戲結束 → 展示「Continue Playing」看廣告復活按鈕。
+5. 結算卡展示排行榜提交（暱稱 + 國家選單）。
+用 iOS 內建「螢幕錄影」錄，從回覆視窗 → 附加檔案上傳。無內購/訂閱、無登入，那些不用錄。
+
+**送出前**：第 2 題填上 iPhone 13 的 iOS 版本（設定→一般→關於本機→軟體版本）。
+排行榜暱稱屬輕度 UGC（Guideline 1.2），這次沒被挑，**不主動提**，被問再答。
+
+### 可直接貼上的回覆（回覆審查 + Notes 兩處都貼）
+
+```
+Thank you for the review. Cosmic Merge is a single-player, offline-friendly
+"merge" puzzle game. Answers to each point below; a screen recording captured
+on a physical iPhone (running the latest iOS) is attached.
+
+1. SCREEN RECORDING (attached)
+Captured on a physical iPhone. It begins at app launch and shows the core loop:
+dropping planets, merging matching planets, using the hammer tool (including the
+"watch a short ad" rewarded-ad prompt), reaching the game-over screen with the
+optional "Continue Playing" rewarded-ad revive, and the optional leaderboard
+submission (self-chosen nickname + country). The App Tracking Transparency
+prompt is shown the first time the player chooses to watch a rewarded ad.
+
+2. DEVICES / OS TESTED BEFORE SUBMISSION
+- iPhone 13 (physical device) — iOS 26.3
+- iPhone 16 Pro (Simulator) — iOS 26
+
+3. WHAT THE APP DOES / TARGET AUDIENCE
+Cosmic Merge is a casual, one-handed "merge" puzzle. The player drops cute
+hand-drawn planets into a night sky; when two matching planets touch they fuse
+into the next one up, chaining from a tiny meteor all the way to the Sun. It is
+a relaxing pick-up-and-play score-chaser aimed at a general casual-puzzle
+audience (rated 4+). No account, no login, playable offline.
+
+4. SETUP / HOW TO ACCESS MAIN FEATURES
+No setup or credentials required — the game is fully playable immediately on
+launch with no account or sign-in. Tap to drop a planet; merge matching planets
+to grow them. To reach the ad/revive flow, let the stack reach the top dashed
+line to trigger the game-over card, where the "Continue Playing" rewarded-ad
+button appears. To reach the hammer ad flow, tap the hammer tool when out of
+hammers. No demo account or sample files are needed.
+
+5. EXTERNAL SERVICES USED
+- Google AdMob — serves optional rewarded video ads (revive / hammer only).
+- Supabase — hosts the optional public high-score leaderboard.
+There are no other third-party data providers, authentication services, payment
+processors, or AI services. There are no in-app purchases or subscriptions.
+
+6. REGIONAL DIFFERENCES
+None. The app functions identically across all regions. There is no
+region-locked or region-specific content.
+
+7. REGULATED INDUSTRY / PROTECTED THIRD-PARTY MATERIAL
+Not applicable. The app is not in a regulated industry. All artwork and the
+generative music are original to the developer; no protected third-party
+material is used.
+
+ADDITIONAL NOTES
+- Rewarded ads (Google AdMob) are entirely optional and never block gameplay.
+  They appear only after a tap, in two clearly-labeled spots ("Continue Playing"
+  revive on game-over, and the hammer tool when empty). Nothing is locked behind
+  watching an ad.
+- App Tracking Transparency is requested lazily — only the first time the player
+  chooses to watch a rewarded ad, not at launch. Declining is fully supported;
+  ads then serve non-personalized.
+- The optional leaderboard only stores a self-chosen display name (not a real
+  name) and a self-selected country from a list (not GPS/IP location). No account
+  is required and the data is not linked to identity.
+
+Contact: jeffrey5304@gmail.com
+```
+
+### 如何把遊戲裝上實體 iPhone 來錄影（用 Xcode + 傳輸線，最快、廣告安全）
+
+> 用「一般 build」而非 release：它跑 Google **測試廣告**（畫面會標 "Test Ad"），
+> 你可以放心一直點來錄影，**不會被 AdMob 判無效流量**。release build 用的是真實廣告
+> 單元，自己反覆點會有無效流量風險 —— 所以錄影用一般 build。審核看的是「廣告流程」，
+> 測試廣告完全 OK。
+
+1. iPhone 13 用傳輸線接上這台 Mac，手機出現「信任這台電腦」按信任。
+2. （iOS 16+）在 iPhone 開開發者模式：設定 → 隱私權與安全性 → 開發者模式 → 開啟 → 重開機。
+3. 專案根目錄跑：`npm run build && npx cap sync ios && npx cap open ios`（Xcode 會開啟 workspace）。
+4. Xcode 上方裝置選單選你的 **iPhone 13**（不是模擬器）；Signing & Capabilities 的 Team = **JIEWAY CHOU**、開 Automatically manage signing（本機已設好）。
+5. 按 ▶ Run。App 會裝進手機並自動啟動。
+6. 首次執行手機會擋開發者憑證：設定 → 一般 → VPN 與裝置管理 → 點你的開發者帳號 → 信任。再從主畫面點圖示打開。
+7. 從控制中心開「螢幕錄影」，照上面 5 步流程錄，錄完影片存到「照片」。
+8. 把影片傳到 Mac（AirDrop 最快），上傳到 App Store Connect 的回覆視窗。
+
+> 備選：也可用 **TestFlight** 裝已上傳的 build 2（App Store Connect → TestFlight → 加自己為
+> Internal Tester → 手機用 TestFlight App 安裝）。它是「審核看到的那個 release build」，最貼近，
+> 但用真實廣告單元，自己點廣告有無效流量風險 —— 想用 TestFlight 錄就只點過一次示意即可。

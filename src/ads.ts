@@ -12,6 +12,24 @@ import { ADMOB_LIVE, ADMOB_REWARDED_AD_UNIT_ID_ANDROID, ADMOB_REWARDED_AD_UNIT_I
 
 export type AdSlot = 'revive' | 'hammer'
 
+/**
+ * 等到 App 真的可見／active 再繼續。iOS 的 ATT 彈窗只有在 UIApplication 為 active
+ * 時才會真的顯示，冷啟動當下 document 可能還是 hidden；先等到 visible 才問，
+ * 避免 requestTrackingAuthorization 靜默失敗（審查員／玩家都看不到彈窗）。
+ */
+function whenAppActive(): Promise<void> {
+  if (document.visibilityState === 'visible') return Promise.resolve()
+  return new Promise<void>((resolve) => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        document.removeEventListener('visibilitychange', onVisible)
+        resolve()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+  })
+}
+
 export interface AdProvider {
   readonly name: string
   /** 兌現獎勵；可兌現回傳 true（接真實廣告後＝玩家完整看完才 true） */
@@ -48,22 +66,30 @@ class AdMobProvider implements AdProvider {
   private trackingAsked = false
 
   /**
-   * iOS 14.5+ 追蹤授權（ATT）：延到玩家「第一次真的要看廣告」時才問。
-   * 開場就問會跟每日獎勵彈窗擠在一起、也沒情境；有情境地問同意率更高。
+   * iOS 14.5+ 追蹤授權（ATT）：App 啟動時就問，且一定要在初始化 AdMob／收集任何
+   * 可用於追蹤的資料「之前」。App Review 是靠這個開場彈窗確認我們有實作 ATT，
+   * 延到首次看廣告才問會讓審查員找不到而被以 Guideline 2.1 退件。
    */
   private async ensureTracking(): Promise<void> {
     if (this.trackingAsked) return
     this.trackingAsked = true
     try {
+      // requestTrackingAuthorization 只有在 App 進入 active 狀態後才會真的彈窗，
+      // 冷啟動當下畫面可能還沒 active，先等到可見再問，避免靜默失敗（審查員看不到）。
+      await whenAppActive()
       await AdMob.requestTrackingAuthorization()
     } catch {
       // 拒絕追蹤或平台不支援：忽略，AdMob 會自動退回非個人化廣告
     }
   }
 
-  /** App 啟動時預熱：只先初始化 SDK（不跳追蹤授權），讓第一次看廣告不用等 SDK 載入。 */
+  /**
+   * App 啟動時預熱：先問 ATT（在初始化前，符合「收集資料前先徵得同意」），
+   * 再初始化 SDK，讓第一次看廣告不用等 SDK 載入。
+   */
   async warmup(): Promise<void> {
     try {
+      await this.ensureTracking() // 開場就問 ATT（在 SDK 初始化前）
       await this.ensureInit()
     } catch {
       // 初始化失敗：忽略，showRewarded 會再試一次
@@ -73,7 +99,7 @@ class AdMobProvider implements AdProvider {
   async showRewarded(_slot: AdSlot): Promise<boolean> {
     try {
       await this.ensureInit()
-      await this.ensureTracking() // 第一次看廣告的當下才問 ATT（延後授權）
+      await this.ensureTracking() // 保險：若啟動預熱沒跑到，看廣告前補問一次
       let earned = false
       // 一定要在 show 之前掛 listener：獎勵是用事件回報，showRewardVideoAd() 的
       // resolve 只代表「廣告流程跑完」（看到一半關掉也會 resolve），不能單獨拿來判斷。

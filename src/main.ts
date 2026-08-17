@@ -860,7 +860,7 @@ applyStrings()
 window.addEventListener('pointerdown', () => startMusic(), { once: true })
 window.addEventListener('keydown', () => startMusic(), { once: true })
 
-/* ── 廣告 SDK 預熱：原生 App 開場就先初始化 SDK（ATT 延到首次看廣告才問，見 ads.ts） ── */
+/* ── 廣告 SDK 預熱：原生 App 開場先問 ATT 追蹤授權，再初始化 SDK（見 ads.ts） ── */
 void ads.warmup?.()
 
 /* ── PWA 離線（只在正式版 Web 註冊；Capacitor 原生 App 資產為本地、不需 SW 且避免快取怪異） ── */
