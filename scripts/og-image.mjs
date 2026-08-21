@@ -70,10 +70,10 @@ await page.evaluate(async () => {
   g.textAlign = 'center'
   g.fillStyle = '#3B3024'
   g.font = "110px 'Gochi Hand', cursive"
-  g.fillText('Cosmic Merge', W / 2, 145)
+  g.fillText('Novaborn', W / 2, 145)
   g.font = "bold 38px system-ui, sans-serif"
   g.fillStyle = '#E07A5F'
-  g.fillText('Merge planets all the way to the Sun!', W / 2, 215)
+  g.fillText('Grow worlds, collapse Suns, discover new stars!', W / 2, 215)
 
   document.body.appendChild(c)
 })
