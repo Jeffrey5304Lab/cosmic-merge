@@ -1,4 +1,4 @@
-# iOS App Store 送審手冊（Cosmic Merge）
+# iOS App Store 送審手冊（Novaborn，原 Cosmic Merge）
 
 > 2026-08-09 建立。這份把「送審要準備的東西」一次備齊：可直接貼進 App Store Connect 的
 > 文案、App Privacy / 年齡分級的答案、以及**只有你（開發者帳號持有人）能做**的步驟。
@@ -22,7 +22,7 @@
 | 追蹤 / ATT | **不追蹤**：非個人化廣告（`npa`），已移除 ATT 與 `NSUserTrackingUsageDescription`（§10） |
 | 出口加密宣告 | `Info.plist` `ITSAppUsesNonExemptEncryption = false`（免年度加密文件） |
 | 隱私政策頁 | https://jeffrey5304lab.github.io/cosmic-merge/privacy.html（已更新揭露 AdMob + ATT） |
-| App Store 截圖 | `screenshots/appstore-6.9/`（1320×2868）+ `appstore-6.5/`（1242×2688）。**2026-08-21 新增星座主打兩張**：`constellations-sky.png`（星圖階梯）、`constellations-play.png`（星座列點亮中）——上架時**排在最前面**，讓商店頁一眼就與通用 merge 區隔（對 4.3(a) 有幫助）。重跑：`npm run dev` 後 `GAME_URL=http://localhost:5173 node scripts/shots-constellation.mjs` |
+| App Store 截圖 | `screenshots/appstore-6.9/`（1320×2868）+ `appstore-6.5/`（1242×2688）。**2026-08-22 改名後需重拍**（頂端標題現為「Novaborn」）：已用 `scripts/shots-novaborn.mjs` 產出 `novaborn-play.png`（成長盤面）與 `novaborn-blackhole.png`（黑洞終局）。重跑：`npm run dev` 後 `GAME_URL=http://localhost:5173 node scripts/shots-novaborn.mjs` |
 
 > ⚠️ `ios/` 在 `.gitignore`，不進版控。若 `ios/` 被刪除重建，`Info.plist` 的
 > `GADApplicationIdentifier` / `ITSAppUsesNonExemptEncryption`
@@ -36,9 +36,10 @@
 1. **Apple Developer Program**：https://developer.apple.com/programs/ 註冊並付 $99/年。
 2. **Xcode 登入**：Xcode → Settings → Accounts 加入你的 Apple ID；在 App target 的
    Signing & Capabilities 選你的 Team、開 Automatically manage signing。
-3. **App Store Connect 建立 App**：https://appstoreconnect.apple.com → My Apps → ＋ →
-   New App。Platform=iOS、Name=`Cosmic Merge`、Primary Language=English、
-   Bundle ID 選 `io.github.jeffrey5304lab.cosmicmerge`、SKU 隨意（如 `cosmicmerge01`）。
+3. **App Store Connect App**：App 已建立（Bundle ID `io.github.jeffrey5304lab.cosmicmerge`，
+   SKU 如 `cosmicmerge01`）。**2026-08-22 起改名 `Novaborn`**：在**同一個 App 記錄**上、隨新版本
+   把 App 名稱改成 `Novaborn` 即可——**切勿**為了改名開新 App／新 Bundle ID（多個相似 App 反而
+   是 4.3 spam 訊號）。Bundle ID 送審後不可改，維持不變。
 4. **打包上傳**：專案跑 `npm run cap:ios:release`（會用正式廣告 ID + 開 Xcode）→
    Xcode 選 **Any iOS Device (arm64)** → Product → Archive → Distribute App →
    App Store Connect → Upload。
@@ -49,19 +50,21 @@
 
 ## 2. 商店文案（可直接貼）
 
-- **App 名稱（≤30 字）**：`Cosmic Merge: Constellations`（28 字）
-  （桌面顯示名仍是 `Cosmic Merge`；2026-08-21 從 `Cosmic Merge: Planet Puzzle` 改為此——
-   把通用的「Planet Puzzle」換成招牌賣點「Constellations」，標題本身就與通用 merge 遊戲區隔，
-   直接對 4.3(a) 表態。若擔心動品牌 SEO，退而求其次可用 `Cosmic Merge: Star Charter`。）
-- **副標 Subtitle（≤30 字）**：`Merge planets, chart the stars`（30 字）
-  （原 `Drop planets, merge worlds` 太通用；新副標點出「拼星座」的獨特玩法）
+- **App 名稱（≤30 字）**：`Novaborn`（8 字）
+  （2026-08-22 **改名定案**。原 `Cosmic Merge` 在 App Store 上與其他開發者的遊戲**直接撞名**
+   （Anton Borries 的「Cosmic Merge」、Scott Brant 的「Cosmic Merge Game」…還有一整叢 Cosmic/
+   Planet Merge），這是 4.3(a) spam 的具體觸發點之一。改名為 `Novaborn`（＝從黑洞塌縮中「誕生
+   的新星」，對應本作核心：合併→黑洞→發現新恆星），完全跳脫 cosmic/merge/planet 飽和字群。
+   刻意**不加** `Cosmic`/`Merge`/`Planet` 之類的副名，避免又落回被抓的字群。網查無同名 App，
+   但**最終以 ASC 送名稱時檢查 + 商標查詢為準**。Bundle ID 不變。）
+- **副標 Subtitle（≤30 字）**：`Grow worlds, discover stars`（27 字）
 - **分類**：Primary = **Games**；子分類 **Puzzle** + **Casual**
 - **關鍵字（≤100 字，逗號分隔不留空白）**：
-  `constellation,stargazing,astronomy,space,galaxy,starmap,nightsky,orion,zodiac,relax,idle,casual`
-  （2026-08-21 大改：**刻意移除 `suika`/`watermelon`/`merge`/`2048`/`fruit`/`ball` 等通用字**——
-   那些是模板農場最愛、也最容易觸發 4.3(a) spam 判定的字；全部改成星座/天文主軸。95 字元。）
+  `star,discover,blackhole,supernova,space,galaxy,nebula,stargazing,astronomy,relax,idle,casual,drop`
+  （**刻意移除 `suika`/`watermelon`/`merge`/`2048`/`planet`/`cosmic`/`fruit`/`ball` 等通用/撞名字**
+   ——那些是模板農場最愛、最容易觸發 4.3(a)；改成「發現新恆星／黑洞」主軸。97 字元。）
 - **宣傳文字 Promotional Text（≤170 字，可隨時改不需審核）**：
-  `Merge planets to chart real constellations — Orion, Cassiopeia, the Southern Cross and more. Cozy hand-drawn art, a living night sky, and a global leaderboard.`
+  `Grow tiny worlds into blazing Suns, then collapse two Suns into a black hole and discover a brand-new star. A cozy, hand-drawn cosmic puzzle you play one-handed.`
 - **Support URL**：`https://jeffrey5304lab.github.io/cosmic-merge/`
 - **Marketing URL（選填）**：`https://jeffrey5304lab.github.io/cosmic-merge/`
 - **Privacy Policy URL**：`https://jeffrey5304lab.github.io/cosmic-merge/privacy.html`
@@ -70,27 +73,26 @@
 ### 描述 Description（≤4000 字）
 
 ```
-Cosmic Merge is a cozy, hand-drawn stargazing puzzle. Drop cute planets into a
-storybook night sky — when two matching worlds touch, they fuse into the next one
-up, from a tiny meteor to the Moon, Mars, Earth… all the way to a blazing Sun.
+Novaborn is a cozy, hand-drawn cosmic puzzle. Drop cute worlds into a storybook
+night sky — when two matching worlds touch, they fuse into the next one up. Grow
+from a tiny meteor to the Moon, Mars, Earth… all the way to a blazing Sun.
 
-But every drop is also charting the sky above. Each planet you create lights a
-star in a real constellation — complete Triangulum, Cassiopeia, the Southern
-Cross, Cygnus and Orion, then keep discovering new stars beyond the Sun. It's a
-merge game with a reason to look up.
+Then the real magic: merge two Suns and they collapse into a BLACK HOLE that
+swallows the whole board — and out of it, a brand-new star is born. Discover and
+name real stars beyond the Sun — Proxima, Sirius, Vega and more — one collapse at
+a time. There is always a new star to find.
 
 Easy to learn, hard to put down. One thumb, endless "just one more drop."
 
 FEATURES
-• CONSTELLATIONS — merge planets to light the stars of real constellations
-  (Orion, Cassiopeia, the Southern Cross…) and unlock the next one
-• A living night sky that fills in as you play, with a full star chart
-• 11-step evolution chain, from Meteor to the Sun — then a black hole and
-  newly discovered stars beyond it
+• Grow worlds from Meteor to the Sun — an 11-step evolution chain
+• BLACK HOLE finale — merge two Suns into a full-screen black hole that clears
+  the board in a gorgeous cutscene
+• Endless star discovery — every black hole reveals a new real star to catalogue
 • Hand-drawn "cozy paper" art — wobbly ink lines, watercolor nebulae, paper grain
-• Chain COMBOs with juicy particles, shockwaves and screen shake
-• Planets with feelings — they blink, smile when they merge, and sweat when the
+• Worlds with feelings — they blink, smile when they merge, and sweat when the
   sky gets crowded
+• Chain COMBOs with juicy particles, shockwaves and screen shake
 • Global leaderboard — submit your score and country, chase the world top 10
 • Achievements, lifetime stats, and a shareable score card
 • Generative lo-fi music, no audio files — pure vibes
@@ -208,7 +210,9 @@ Contact: jeffrey5304@gmail.com
 - [ ] `npm run cap:ios:release` → Archive → Upload 成功、TestFlight 能跑
 - [ ] 貼上第 2 節文案、第 3 節隱私、第 4 節分級、第 6 節 Review notes
 - [ ] 上傳 `screenshots/appstore-6.9/`（6.9″ 必填；6.5″ 可留白，Apple 會自動縮放沿用）
-- [ ] 商店搜「Cosmic Merge」確認無撞名 / 商標問題
+- [ ] App 名稱在版本頁改成 `Novaborn`（同一個 App 記錄，勿開新 App）
+- [ ] App Privacy 已改成「不追蹤」（Device ID / Advertising Data 取消 Used to Track）
+- [ ] 送出前商店搜「Novaborn」再確認一次無撞名 / 商標問題（舊名 Cosmic Merge 已確認撞名，故改名）
 - [ ] Submit for Review
 
 ---
@@ -375,16 +379,21 @@ Please review build 1.0 (3). Thank you.
   這一步是這條退件能過的關鍵——**標籤一定要與「不追蹤」的行為一致**。
 
 ### (B) 4.3(a) — Spam（看起來像換皮的 merge 模板）
-根因：核心迴圈與市面大量 Suika/2048 合成遊戲雷同，商店頁又是通用 merge 字眼。兩手策略：
+根因：**名稱直接撞名** + 概念與市面大量 Suika/2048 合成遊戲雷同。App Store 上已有其他開發者的
+「Cosmic Merge」「Cosmic Merge Game」以及一整叢 Cosmic/Planet Merge 物理遊戲——舊名正落在這個
+飽和字群裡。策略（2026-08-22 定案，**不再靠星座玩法**，改走「改名 + 突顯既有原創性」）：
 
-1. **加入招牌玩法「星座任務（Constellation Missions）」**（已實作，見 `src/constellations.ts`）：
-   畫面頂端常駐一座目標星座，合成出指定階級的星球就點亮星座裡的一顆星，整座點亮＝完成 +
-   大分並解鎖下一座（Triangulum → Cassiopeia → Southern Cross → Cygnus → Orion → Ursa Major）；
-   底部新增 SKY 分頁顯示整條星座階梯。把「把數字合更高」重新定位成「拼出真實星座」，一進遊戲
-   就看得到、和市面 merge 明顯不同。
-2. **改寫商店 metadata**（見 §2 已更新）：關鍵字/副標/描述改以 constellation / stargazing /
-   astronomy 為主軸，去掉通用 merge 字眼。
-3. **在回覆中主張原創**：自建、非模板、非換皮、單帳號單 App、素材原創。
+1. **改名 `Cosmic Merge` → `Novaborn`**（見 §2）。這是最具體的觸發點：舊名與他人 App 直接撞名。
+   新名跳脫 cosmic/merge/planet 字群，且對應本作真正核心「合併→黑洞→誕生新恆星」。
+   （同時同步改了遊戲內標題 `src/strings.ts`、`index.html` meta、`Info.plist` `CFBundleDisplayName`。）
+2. **改寫商店 metadata**（見 §2）：關鍵字/副標/描述改以「發現新恆星／黑洞」為主軸，
+   移除 suika/merge/2048/planet/cosmic 等通用/撞名字。
+3. **在回覆中突顯既有的原創機制**：黑洞終局過場、黑洞後**無盡發現真實恆星**的階梯（Proxima、
+   Sirius…Polaris）、手繪紙感美術、有表情情緒的星球——這些都不是模板功能。
+4. **主張原創**：自建、非模板、非換皮、單帳號單 App、素材原創。
+
+> 註：2026-08-21 曾實作「星座任務」當招牌機制，但 2026-08-22 依使用者決定**移除**（與既有的
+> 恆星發現階梯主題重疊、顯多餘）；差異化改由「改名 + 既有黑洞/恆星發現獨特性 + metadata + 申訴」承擔。
 
 ### 可直接貼上的回覆（App Store Connect → 回覆 App 審查；同時貼進 App Review Information → Notes）
 
@@ -401,32 +410,32 @@ App Store Connect so that Device ID and Advertising Data are marked as NOT used
 to track you, to match the app's behavior.
 
 Guideline 4.3(a) — Spam:
-Cosmic Merge is an original game built from scratch by a single developer. It is
-not based on a third-party template, is not a repackaged app, and is not one of
+This app is an original game built from scratch by a single developer. It is not
+based on a third-party template, is not a repackaged app, and is not one of
 several similar apps across accounts. All art, sound, and code are our own.
 
-The game has a distinct concept and mechanic that set it apart from a standard
-merge game: a Constellation Missions system. A target real-world constellation is
-always shown at the top of the screen (Orion, Cassiopeia, the Southern Cross, and
-more). Every planet you merge lights one star of that constellation; completing it
-awards a bonus and unlocks the next constellation, viewable on a dedicated star
-chart. The game also features hand-drawn "cozy paper" artwork, planets with facial
-expressions and moods, an endless star-discovery ladder beyond the Sun, and a
-full-screen black-hole finale — none of which are template features.
-
-We have also updated the app's App Store metadata (subtitle, keywords, and
-description) to reflect this original constellation concept.
+To make its identity distinct, we have renamed the app to "Novaborn" and rewritten
+its metadata. The game's concept is not just merging: you grow worlds up to a Sun,
+then merging two Suns collapses them into a full-screen BLACK HOLE that clears the
+whole board, and from that collapse a brand-new real star is born. Players then
+endlessly discover and catalogue real stars beyond the Sun (Proxima, Sirius, Vega,
+and more). This black-hole collapse and endless star-discovery loop, together with
+our hand-drawn "cozy paper" artwork and worlds with facial expressions and moods,
+are original and are not template features.
 
 Please review the updated build. Thank you for your time.
 ```
 
 ### 送審流程（build 4）
-1. 程式碼改動已在本機（`src/ads.ts`、`src/constellations.ts`、`src/main.ts`、`index.html`、
-   `src/style.css`、`src/game.ts`、`src/strings.ts`）。先 commit。
-2. `ios/App/App/Info.plist` 已移除 `NSUserTrackingUsageDescription`（`ios/` 不進 git，僅本機）。
+1. 程式碼改動已在本機（改名 + 移除星座 + 不追蹤）：`src/ads.ts`、`src/strings.ts`、`index.html`、
+   `src/main.ts`、`src/style.css`、`src/game.ts`（後三者已還原到加星座前）。先 commit。
+2. `ios/App/App/Info.plist`：已移除 `NSUserTrackingUsageDescription`、`CFBundleDisplayName` 改
+   `Novaborn`（`ios/` 不進 git，僅本機）。
 3. 版本號 build 3→4：`project.pbxproj` 兩處 `CURRENT_PROJECT_VERSION` 改 4。
 4. `npm run build:release && npx cap sync ios` →（Xcode Organizer）Archive → Upload。
-5. **App Store Connect → App Privacy 改成不追蹤（見 §3）** ← 這步別忘，否則 5.1.2(i) 會再退。
-6. 更新 §2 的 metadata（副標/關鍵字/描述）。
-7. 換上有星座任務的新截圖（頂端星座列 + SKY 星圖）。
-8. 貼上上面的回覆 → 選 build 4 →「重新提交至 App 審查」。
+5. **App Store Connect：**
+   - **App 名稱改 `Novaborn`**（隨新版本一起改；同一個 App 記錄，**不要**開新 App／新 Bundle ID）。
+   - **App Privacy 改成不追蹤（見 §3）** ← 這步別忘，否則 5.1.2(i) 會再退。
+   - 更新 §2 的副標/關鍵字/描述。
+6. 換上顯示新名字「Novaborn」的新截圖（見 §0；用 `scripts/shots-novaborn.mjs` 重跑）。
+7. 貼上上面的回覆 → 選 build 4 →「重新提交至 App 審查」。

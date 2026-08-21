@@ -254,20 +254,6 @@ export class Game {
   }
 
   /** 重新開始 */
-  /**
-   * 加計獎勵分數（目前用於「完成星座任務」）。與合成得分走同一個 score／best，
-   * 因此會一起進排行榜；只做加分＋存檔＋回報，不動物理與遊戲狀態。
-   */
-  awardBonus(points: number) {
-    if (points <= 0 || this.state === 'over') return
-    this.score += points
-    if (this.score > this.best) {
-      this.best = this.score
-      saveBest(this.best)
-    }
-    this.cb.onScore(this.score, this.best, this.maxTierReached)
-  }
-
   restart() {
     Composite.clear(this.engine.world, false)
     this.buildWalls()
