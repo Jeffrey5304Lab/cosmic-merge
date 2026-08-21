@@ -2,8 +2,19 @@ import './style.css'
 import { Game, MAX_REVIVES } from './game'
 import { BOARD, SUN_TIER, TIERS } from './planets'
 import { discoveredCount } from './discovery'
+import {
+  LADDER,
+  allComplete,
+  completedCount,
+  currentConstellation,
+  litCount,
+  litMask,
+  registerMerge,
+  resetRunProgress,
+  type Constellation,
+} from './constellations'
 import { drawPlanet } from './render'
-import { isMuted, setMuted, startMusic } from './audio'
+import { isMuted, playFanfare, setMuted, startMusic } from './audio'
 import { planetName, STR } from './strings'
 import { shareCard } from './sharecard'
 import {
@@ -62,6 +73,13 @@ const bestWallTitleEl = $<HTMLSpanElement>('best-wall-title')
 const bestWallRowEl = $<HTMLDivElement>('best-wall-row')
 const muteBtn = $<HTMLButtonElement>('mute')
 const nameInput = $<HTMLInputElement>('name-input')
+
+/* ── 星座任務（招牌玩法）：常駐追蹤列 + 完成橫幅 ── */
+const consEl = $<HTMLDivElement>('constellation')
+const consNameEl = $<HTMLSpanElement>('cons-name')
+const consProgressEl = $<HTMLSpanElement>('cons-progress')
+const consMapEl = document.getElementById('cons-map') as unknown as SVGSVGElement
+const consBannerEl = $<HTMLDivElement>('cons-banner')
 
 /* ── 玩家名稱（記住在 localStorage） ── */
 const NAME_KEY = 'cosmic-merge:name'
@@ -414,6 +432,13 @@ const game = new Game({
     recordCombo(multiplier)
     checkAchievements()
     if (resultTier === SUN_TIER) maybeShowBlackHoleGoal() // 首次做出太陽 → 揭示黑洞目標
+    // 星座任務：合成出的階級可能點亮目標星座的一顆星（甚至完成整座）
+    const cr = registerMerge(resultTier)
+    if (cr.litIndex >= 0) {
+      renderConstellationTracker() // registerMerge 完成時已推進到下一座，這裡就會顯示新目標
+      if (chartMode === 'sky') renderChart()
+      if (cr.completed) onConstellationComplete(cr.name, cr.bonus)
+    }
   },
   onSupernova(multiplier) {
     recordSupernova()
@@ -670,6 +695,8 @@ $<HTMLButtonElement>('restart').addEventListener('click', () => {
   exitSmashMode()
   refillFreeHammers() // 每局開局補到免費樓地板
   refreshHammerCount()
+  resetRunProgress() // 星座任務：新局重置本局點亮進度（已解鎖階梯保留）
+  renderConstellationTracker()
   game.restart()
 })
 
@@ -726,6 +753,11 @@ function applyStrings() {
   $('tutorial-text').innerHTML = ICON_HAND + STR.tutorial
   $('lb-tab-global').innerHTML = ICON_GLOBE + ' Global'
   $('daily-gift').innerHTML = ICON_GIFT
+  $('cons-label').textContent = STR.constellationLabel
+  tabEvolutionBtn.textContent = STR.evolution
+  tabStarsBtn.textContent = STR.starsTab
+  tabSkyBtn.textContent = STR.skyTab
+  renderConstellationTracker()
   renderChart()
   renderGameOver()
 }
@@ -792,7 +824,9 @@ window.addEventListener('keydown', e => {
 /* ── 底部圖鑑：同一列在「行星進化」與「恆星發現」間切換（不多佔畫面空間） ── */
 const tabEvolutionBtn = $<HTMLButtonElement>('tab-evolution')
 const tabStarsBtn = $<HTMLButtonElement>('tab-stars')
-let chartMode: 'evolution' | 'stars' = 'evolution'
+const tabSkyBtn = $<HTMLButtonElement>('tab-sky')
+type ChartMode = 'evolution' | 'stars' | 'sky'
+let chartMode: ChartMode = 'evolution'
 let chartRevertTimer = 0
 
 function renderChart() {
@@ -801,6 +835,10 @@ function renderChart() {
   if (!g) return
   g.clearRect(0, 0, chart.width, chart.height)
   g.textAlign = 'center'
+  if (chartMode === 'sky') {
+    renderSkyChart(g, chart)
+    return
+  }
   if (chartMode === 'evolution') {
     // 行星進化鏈：隕石 → 太陽（固定 11 顆）
     const planets = TIERS.slice(0, SUN_TIER + 1)
@@ -841,11 +879,12 @@ function renderChart() {
   }
 }
 
-function setChartMode(mode: 'evolution' | 'stars', autoRevert = false) {
+function setChartMode(mode: ChartMode, autoRevert = false) {
   chartMode = mode
   clearTimeout(chartRevertTimer)
   tabEvolutionBtn.classList.toggle('active', mode === 'evolution')
   tabStarsBtn.classList.toggle('active', mode === 'stars')
+  tabSkyBtn.classList.toggle('active', mode === 'sky')
   renderChart()
   // 發現新恆星時自動切到 STARS 展示幾秒，再切回進化鏈
   if (autoRevert) chartRevertTimer = window.setTimeout(() => setChartMode('evolution'), 5000)
@@ -853,6 +892,186 @@ function setChartMode(mode: 'evolution' | 'stars', autoRevert = false) {
 
 tabEvolutionBtn.addEventListener('click', () => setChartMode('evolution'))
 tabStarsBtn.addEventListener('click', () => setChartMode('stars'))
+tabSkyBtn.addEventListener('click', () => setChartMode('sky'))
+
+/* ── 星座任務渲染：頂端常駐小星圖 + 底部 SKY 全階梯圖鑑 + 完成慶祝 ── */
+
+/** 把星座正規化座標 (0..1) 映射到一個矩形框，畫出連線與星點（點亮=蜜金實心＋光暈） */
+function drawConstellationGlyph(
+  g: CanvasRenderingContext2D,
+  c: Constellation,
+  cx: number,
+  cy: number,
+  halfW: number,
+  halfH: number,
+  mask: boolean[],
+  dim = false,
+) {
+  const X = (x: number) => cx - halfW + x * halfW * 2
+  const Y = (y: number) => cy - halfH + y * halfH * 2
+  // 連線：兩端都點亮＝蜜金，否則暗淡
+  g.lineCap = 'round'
+  for (const [a, b] of c.lines) {
+    const both = mask[a] && mask[b]
+    g.strokeStyle = dim ? 'rgba(246,234,201,0.14)' : both ? 'rgba(232,163,61,0.9)' : 'rgba(246,234,201,0.22)'
+    g.lineWidth = both ? 2 : 1.2
+    g.beginPath()
+    g.moveTo(X(c.stars[a][0]), Y(c.stars[a][1]))
+    g.lineTo(X(c.stars[b][0]), Y(c.stars[b][1]))
+    g.stroke()
+  }
+  // 星點
+  c.stars.forEach((p, i) => {
+    const x = X(p[0])
+    const y = Y(p[1])
+    if (!dim && mask[i]) {
+      g.fillStyle = 'rgba(232,163,61,0.3)'
+      g.beginPath()
+      g.arc(x, y, 6, 0, Math.PI * 2)
+      g.fill()
+      g.fillStyle = '#ffe9b0'
+      g.strokeStyle = 'rgba(232,163,61,0.95)'
+      g.lineWidth = 1.2
+      g.beginPath()
+      g.arc(x, y, 3, 0, Math.PI * 2)
+      g.fill()
+      g.stroke()
+    } else {
+      g.fillStyle = 'none'
+      g.strokeStyle = dim ? 'rgba(246,234,201,0.28)' : 'rgba(246,234,201,0.55)'
+      g.lineWidth = 1.3
+      g.beginPath()
+      g.arc(x, y, 2.6, 0, Math.PI * 2)
+      g.stroke()
+    }
+  })
+}
+
+/** SKY 圖鑑：把整條星座階梯畫成一排——完成滿星、當前顯示本局進度、未解鎖暗淡預告 */
+function renderSkyChart(g: CanvasRenderingContext2D, chart: HTMLCanvasElement) {
+  const cells = LADDER.length
+  const w = chart.width / cells
+  const done = completedCount()
+  const currentMask = litMask()
+  LADDER.forEach((c, i) => {
+    const cx = w * i + w / 2
+    const isDone = i < done
+    const isCurrent = i === done && !allComplete()
+    const mask = isDone ? c.req.map(() => true) : isCurrent ? currentMask : c.req.map(() => false)
+    // 夜空紙片底
+    g.fillStyle = isDone ? 'rgba(65,73,104,0.9)' : isCurrent ? 'rgba(65,73,104,0.7)' : 'rgba(65,73,104,0.4)'
+    roundRect(g, cx - w / 2 + 5, 4, w - 10, 44, 9)
+    g.fill()
+    drawConstellationGlyph(g, c, cx, 26, w * 0.3, 17, mask, !isDone && !isCurrent)
+    // 名稱 + 進度
+    g.fillStyle = isDone ? '#6B5844' : isCurrent ? '#3B3024' : 'rgba(107,88,68,0.55)'
+    g.font = 'bold 10px system-ui, sans-serif'
+    g.fillText(c.name, cx, 63)
+    if (isCurrent) {
+      g.fillStyle = '#B97742'
+      g.font = 'bold 9px system-ui, sans-serif'
+      g.fillText(`${litCount()}/${c.req.length}`, cx, 15)
+    }
+  })
+}
+
+/** 小工具：圓角矩形路徑（畫 SKY 圖鑑夜空片用） */
+function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  g.beginPath()
+  g.moveTo(x + r, y)
+  g.arcTo(x + w, y, x + w, y + h, r)
+  g.arcTo(x + w, y + h, x, y + h, r)
+  g.arcTo(x, y + h, x, y, r)
+  g.arcTo(x, y, x + w, y, r)
+  g.closePath()
+}
+
+/**
+ * 頂端常駐星座列：名稱 + 手繪小星圖（一顆顆點亮）+ 進度。
+ * 星圖用「像素座標」繪製（viewBox 設成元素實際尺寸、preserveAspectRatio=none），
+ * 這樣星座能置中在一整條夜空裡、四周散佈微弱背景星，看起來像真的一小片星空。
+ */
+// 背景星（正規化 0..1，手挑成散佈狀）—— 讓夜空條不空、更有手繪星圖感
+const SKYBAR_BG_STARS: ReadonlyArray<readonly [number, number, number]> = [
+  [0.05, 0.3, 0.7], [0.11, 0.72, 0.5], [0.19, 0.2, 0.6], [0.27, 0.85, 0.5],
+  [0.38, 0.15, 0.5], [0.44, 0.6, 0.7], [0.56, 0.28, 0.6], [0.63, 0.8, 0.5],
+  [0.71, 0.18, 0.7], [0.78, 0.55, 0.5], [0.85, 0.82, 0.6], [0.9, 0.32, 0.7],
+  [0.95, 0.68, 0.5], [0.33, 0.9, 0.5], [0.5, 0.92, 0.6], [0.67, 0.5, 0.5],
+]
+
+function renderConstellationTracker() {
+  const c = currentConstellation()
+  const mask = litMask()
+  const complete = allComplete()
+  consNameEl.textContent = c.name
+  consProgressEl.textContent = complete ? '★' : `${litCount()}/${c.req.length}`
+
+  const rect = consMapEl.getBoundingClientRect()
+  const W = rect.width > 10 ? rect.width : 340
+  const H = rect.height > 6 ? rect.height : 40
+  consMapEl.setAttribute('viewBox', `0 0 ${W.toFixed(1)} ${H.toFixed(1)}`)
+  consMapEl.setAttribute('preserveAspectRatio', 'none')
+
+  // 星座置中於一個「橫向略寬」的框（正規化 0..1 → 像素），四周留給背景星
+  const padY = 7
+  const boxH = H - padY * 2
+  const boxW = Math.min(W * 0.62, boxH * 2.4)
+  const x0 = (W - boxW) / 2
+  const y0 = padY
+  const px = (x: number) => (x0 + x * boxW).toFixed(1)
+  const py = (y: number) => (y0 + y * boxH).toFixed(1)
+
+  let s = ''
+  // 背景星（微弱、鋪滿整條）
+  for (const [bx, by, a] of SKYBAR_BG_STARS) {
+    s += `<circle cx="${(bx * W).toFixed(1)}" cy="${(by * H).toFixed(1)}" r="0.9" fill="rgba(246,234,201,${a * 0.4})" />`
+  }
+  // 星座連線
+  for (const [a, b] of c.lines) {
+    const both = mask[a] && mask[b]
+    s += `<line x1="${px(c.stars[a][0])}" y1="${py(c.stars[a][1])}" x2="${px(c.stars[b][0])}" y2="${py(c.stars[b][1])}" stroke="${both ? 'var(--honey)' : 'rgba(246,234,201,0.24)'}" stroke-width="${both ? 1.7 : 1}" stroke-linecap="round" />`
+  }
+  // 星點（點亮＝蜜金實心＋光暈；未亮＝空心細框）
+  c.stars.forEach((p, i) => {
+    const cx = px(p[0])
+    const cy = py(p[1])
+    if (mask[i]) {
+      s += `<circle cx="${cx}" cy="${cy}" r="5" fill="var(--honey)" opacity="0.28" />`
+      s += `<circle cx="${cx}" cy="${cy}" r="2.8" fill="#ffe9b0" stroke="var(--honey)" stroke-width="1" />`
+    } else {
+      s += `<circle cx="${cx}" cy="${cy}" r="2.3" fill="none" stroke="rgba(246,234,201,0.55)" stroke-width="1.1" />`
+    }
+  })
+  consMapEl.innerHTML = s
+}
+
+// 視窗尺寸變動時重繪星圖（viewBox 依實際像素尺寸，避免變形）
+window.addEventListener('resize', renderConstellationTracker)
+
+/** 完成一整座星座：加計獎勵分數 + 號角 + 橫幅 + 追蹤列脈動 */
+let consBannerTimer = 0
+function onConstellationComplete(name: string, bonus: number) {
+  game.awardBonus(bonus) // 星座獎勵分數併入本局 score／best（一起進排行榜）
+  playFanfare()
+  consBannerEl.innerHTML = `${ICON_SPARKLE}${STR.constellationDone(name)} ${STR.constellationBonus(bonus)}`
+  consBannerEl.classList.remove('show')
+  void consBannerEl.offsetWidth
+  consBannerEl.classList.add('show')
+  clearTimeout(consBannerTimer)
+  consBannerTimer = window.setTimeout(() => consBannerEl.classList.remove('show'), 3000)
+  consEl.classList.remove('complete')
+  void consEl.offsetWidth
+  consEl.classList.add('complete')
+}
+
+// 點一下（或鍵盤 Enter/Space）頂端星座列 → 打開底部 SKY 全階梯圖鑑
+consEl.addEventListener('click', () => setChartMode('sky'))
+consEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    setChartMode('sky')
+  }
+})
 
 applyStrings()
 
@@ -1127,7 +1346,22 @@ function maybeShowBlackHoleGoal() {
 }
 
 /* ── 開發模式：掛上 window 方便在 console 觸發黑洞等事件（正式包不含） ── */
-if (import.meta.env.DEV) (window as unknown as { game?: Game }).game = game
+if (import.meta.env.DEV) {
+  const w = window as unknown as { game?: Game; __cons?: unknown }
+  w.game = game
+  // 星座任務用的 DEV 測試座：可不靠物理直接點亮/完成星座（正式包會被 tree-shake 掉）
+  w.__cons = {
+    merge(tier: number) {
+      const cr = registerMerge(tier)
+      renderConstellationTracker()
+      if (chartMode === 'sky') renderChart()
+      if (cr.completed) onConstellationComplete(cr.name, cr.bonus)
+      return cr
+    },
+    litMask,
+    reset: resetRunProgress,
+  }
+}
 
 /* ── 主迴圈 ── */
 let last = performance.now()

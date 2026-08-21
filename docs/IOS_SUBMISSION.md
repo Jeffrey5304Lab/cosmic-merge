@@ -3,8 +3,9 @@
 > 2026-08-09 建立。這份把「送審要準備的東西」一次備齊：可直接貼進 App Store Connect 的
 > 文案、App Privacy / 年齡分級的答案、以及**只有你（開發者帳號持有人）能做**的步驟。
 >
-> ⚠️ 這版 **v1 有廣告**：復活／榔頭是 AdMob 獎勵廣告（`src/ads.ts` 的 `AdMobProvider`），
-> 開場會跳 iOS 追蹤授權（ATT）。`docs/APP_PACKAGING.md` §6 說「v1 無廣告」已過時，以本檔為準。
+> ⚠️ 這版 **v1 有廣告**：復活／榔頭是 AdMob 獎勵廣告（`src/ads.ts` 的 `AdMobProvider`）。
+> **2026-08-21 起改為非個人化廣告、不追蹤、已移除 ATT**（因應第三次退件，見 §10）。
+> `docs/APP_PACKAGING.md` §6 說「v1 無廣告」已過時，以本檔為準。
 
 ---
 
@@ -18,14 +19,15 @@
 | App 圖示 / 啟動畫面 | 已由 `assets/` 產生 |
 | AdMob App ID | 已填入 `Info.plist` 的 `GADApplicationIdentifier`（`ca-app-pub-9224826741087415~3783216344`） |
 | AdMob 正式 Rewarded 單元（iOS） | 已填 `src/config.ts` `REAL_REWARDED_IOS`；`build:release` 才啟用 |
-| ATT 用途說明 | `Info.plist` `NSUserTrackingUsageDescription` 已填 |
+| 追蹤 / ATT | **不追蹤**：非個人化廣告（`npa`），已移除 ATT 與 `NSUserTrackingUsageDescription`（§10） |
 | 出口加密宣告 | `Info.plist` `ITSAppUsesNonExemptEncryption = false`（免年度加密文件） |
 | 隱私政策頁 | https://jeffrey5304lab.github.io/cosmic-merge/privacy.html（已更新揭露 AdMob + ATT） |
-| App Store 截圖（6.9″） | `screenshots/appstore-6.9/` 兩張（gameplay + 結算/最佳紀錄），1320×2868 |
+| App Store 截圖 | `screenshots/appstore-6.9/`（1320×2868）+ `appstore-6.5/`（1242×2688）。**2026-08-21 新增星座主打兩張**：`constellations-sky.png`（星圖階梯）、`constellations-play.png`（星座列點亮中）——上架時**排在最前面**，讓商店頁一眼就與通用 merge 區隔（對 4.3(a) 有幫助）。重跑：`npm run dev` 後 `GAME_URL=http://localhost:5173 node scripts/shots-constellation.mjs` |
 
 > ⚠️ `ios/` 在 `.gitignore`，不進版控。若 `ios/` 被刪除重建，`Info.plist` 的
-> `GADApplicationIdentifier` / `NSUserTrackingUsageDescription` / `ITSAppUsesNonExemptEncryption`
-> 要重新補（見上表值）。
+> `GADApplicationIdentifier` / `ITSAppUsesNonExemptEncryption`
+> 要重新補（見上表值）。**注意**：改為不追蹤後，`NSUserTrackingUsageDescription`
+> **不要**再加回去（§10）。
 
 ---
 
@@ -47,15 +49,19 @@
 
 ## 2. 商店文案（可直接貼）
 
-- **App 名稱（≤30 字）**：`Cosmic Merge: Planet Puzzle`
-  （桌面顯示名仍是 `Cosmic Merge`；商店標題加關鍵字避免撞名 + 提升搜尋，2026-08-10 定案）
-- **副標 Subtitle（≤30 字）**：`Drop planets, merge worlds`
+- **App 名稱（≤30 字）**：`Cosmic Merge: Constellations`（28 字）
+  （桌面顯示名仍是 `Cosmic Merge`；2026-08-21 從 `Cosmic Merge: Planet Puzzle` 改為此——
+   把通用的「Planet Puzzle」換成招牌賣點「Constellations」，標題本身就與通用 merge 遊戲區隔，
+   直接對 4.3(a) 表態。若擔心動品牌 SEO，退而求其次可用 `Cosmic Merge: Star Charter`。）
+- **副標 Subtitle（≤30 字）**：`Merge planets, chart the stars`（30 字）
+  （原 `Drop planets, merge worlds` 太通用；新副標點出「拼星座」的獨特玩法）
 - **分類**：Primary = **Games**；子分類 **Puzzle** + **Casual**
 - **關鍵字（≤100 字，逗號分隔不留空白）**：
-  `suika,watermelon,space,galaxy,drop,combo,star,relax,idle,physics,casual,ball,fruit`
-  （刻意不含 merge/planet/puzzle/cosmic —— 那些已在標題/副標吃到更高權重，不重複才不浪費格子）
+  `constellation,stargazing,astronomy,space,galaxy,starmap,nightsky,orion,zodiac,relax,idle,casual`
+  （2026-08-21 大改：**刻意移除 `suika`/`watermelon`/`merge`/`2048`/`fruit`/`ball` 等通用字**——
+   那些是模板農場最愛、也最容易觸發 4.3(a) spam 判定的字；全部改成星座/天文主軸。95 字元。）
 - **宣傳文字 Promotional Text（≤170 字，可隨時改不需審核）**：
-  `Drop planets, merge matching worlds, and grow from a tiny meteor all the way to the Sun. Cozy hand-drawn art, chill lo-fi music, and a global leaderboard.`
+  `Merge planets to chart real constellations — Orion, Cassiopeia, the Southern Cross and more. Cozy hand-drawn art, a living night sky, and a global leaderboard.`
 - **Support URL**：`https://jeffrey5304lab.github.io/cosmic-merge/`
 - **Marketing URL（選填）**：`https://jeffrey5304lab.github.io/cosmic-merge/`
 - **Privacy Policy URL**：`https://jeffrey5304lab.github.io/cosmic-merge/privacy.html`
@@ -64,15 +70,23 @@
 ### 描述 Description（≤4000 字）
 
 ```
-Cosmic Merge is a cozy, hand-drawn take on the classic merge puzzle. Drop cute
-planets into a storybook night sky — when two matching worlds touch, they fuse
-into the next one up. Go from a tiny meteor to the Moon, Mars, Earth… all the way
-to a blazing Sun.
+Cosmic Merge is a cozy, hand-drawn stargazing puzzle. Drop cute planets into a
+storybook night sky — when two matching worlds touch, they fuse into the next one
+up, from a tiny meteor to the Moon, Mars, Earth… all the way to a blazing Sun.
+
+But every drop is also charting the sky above. Each planet you create lights a
+star in a real constellation — complete Triangulum, Cassiopeia, the Southern
+Cross, Cygnus and Orion, then keep discovering new stars beyond the Sun. It's a
+merge game with a reason to look up.
 
 Easy to learn, hard to put down. One thumb, endless "just one more drop."
 
 FEATURES
-• 11-step evolution chain, from Meteor to the Sun
+• CONSTELLATIONS — merge planets to light the stars of real constellations
+  (Orion, Cassiopeia, the Southern Cross…) and unlock the next one
+• A living night sky that fills in as you play, with a full star chart
+• 11-step evolution chain, from Meteor to the Sun — then a black hole and
+  newly discovered stars beyond it
 • Hand-drawn "cozy paper" art — wobbly ink lines, watercolor nebulae, paper grain
 • Chain COMBOs with juicy particles, shockwaves and screen shake
 • Planets with feelings — they blink, smile when they merge, and sweat when the
@@ -90,18 +104,20 @@ forced, nothing locked behind them.
 
 ## 3. App Privacy 問卷（App Store Connect → App Privacy）
 
-App 用了 **Google AdMob**（廣告）與 **Supabase**（排行榜）。建議這樣勾（AdMob 部分依 Google 官方
-「Prepare for Apple's App Store data disclosure」指引；有更新以 Google 文件為準）：
+> 🔴 **2026-08-21 重大變更（因應第三次退件 5.1.2(i)，見 §10）**：本 App 已改為
+> **完全不追蹤（No Tracking）**——一律請求「非個人化廣告」(`npa`，見 `src/ads.ts`)、
+> 不使用 IDFA、已移除 ATT。因此 App Privacy 一定要對應改成「**不用於追蹤你**」，
+> 否則標籤與行為不符會再被 5.1.2(i) 退。以下為**更新後**的正確勾法。
 
-**Data Used to Track You（因為有 ATT + IDFA）**
-- **Identifiers → Device ID**
-- **Usage Data → Advertising Data**（廣告互動）
+App 用了 **Google AdMob**（廣告）與 **Supabase**（排行榜）。
+
+**Data Used to Track You** → **無**（此區塊全部不勾；我們不做跨 App／跨網站追蹤）
 
 **Data Linked / Not Linked**
 | 資料類型 | 來源 | 目的 | Linked to identity? | Used for tracking? |
 |---|---|---|---|---|
-| Device ID | AdMob | Third-Party Advertising | No | **Yes** |
-| Advertising Data | AdMob | Third-Party Advertising | No | **Yes** |
+| Device ID | AdMob | Third-Party Advertising | No | **No** |
+| Advertising Data | AdMob | Third-Party Advertising | No | **No** |
 | Product Interaction（Usage Data） | AdMob | Third-Party Advertising / Analytics | No | No |
 | Coarse Location（IP 推估，選填視設定） | AdMob | Third-Party Advertising | No | No |
 | Crash / Performance / Diagnostics | AdMob SDK | App Functionality | No | No |
@@ -111,8 +127,8 @@ App 用了 **Google AdMob**（廣告）與 **Supabase**（排行榜）。建議�
 > 註：暱稱是「自選顯示名稱」非真實姓名，歸類 User Content；國家是清單自選，非 GPS/IP 定位。
 > 我們沒有帳號系統，排行榜資料不與身分連結。
 
-**送審時的 IDFA 宣告**：Advertising Identifier 使用 = **Yes** → 勾「Serve advertisements
-within the app」；ATT 已實作，符合「only after obtaining permission」。
+**送審時的 IDFA 宣告**：Advertising Identifier 使用 = **No**（改為非個人化廣告後不再存取
+IDFA、也沒有 ATT）。若 App Store Connect 仍問到 IDFA，選 **No**。
 
 ---
 
@@ -154,10 +170,17 @@ REWARDED ADS (Google AdMob)
 - Both are clearly labeled "Watch a short ad …" and only play after a tap.
 - Nothing in the game is locked behind watching an ad.
 
-APP TRACKING TRANSPARENCY
-- The ATT permission prompt is requested lazily — only the first time the
-  player chooses to watch a rewarded ad — not at launch. Declining is fully
-  supported; ads then serve non-personalized.
+NO TRACKING
+- This app does not track users. It uses no cross-app/cross-site tracking and
+  does not access the advertising identifier (IDFA). All rewarded ads are
+  requested as NON-PERSONALIZED. The app therefore does not use App Tracking
+  Transparency, and App Privacy is set to "not used to track you."
+
+CONSTELLATIONS (signature mechanic)
+- A target real constellation is always shown at the top of the screen. Each
+  planet you merge lights one of its stars; completing it unlocks the next
+  constellation. Tap the top bar (or the SKY tab at the bottom) to see the full
+  star chart. This is visible immediately on the first screen.
 
 OPTIONAL LEADERBOARD
 - On the game-over screen the player may optionally submit a self-chosen
@@ -291,3 +314,119 @@ Contact: jeffrey5304@gmail.com
 > 備選：也可用 **TestFlight** 裝已上傳的 build 2（App Store Connect → TestFlight → 加自己為
 > Internal Tester → 手機用 TestFlight App 安裝）。它是「審核看到的那個 release build」，最貼近，
 > 但用真實廣告單元，自己點廣告有無效流量風險 —— 想用 TestFlight 錄就只點過一次示意即可。
+
+---
+
+## 9. 第二次被退件：ATT 彈窗找不到（2026-08-17，Guideline 2.1）
+
+> Submission ID 07378622-aac7-409e-9a08-b00f8486fe27，審於 iPad Air 11" (M3) / iPadOS 26.6。
+> 原因：*"uses AppTrackingTransparency framework, but we are unable to locate the ATT
+> permission request."* 根因：舊版把 ATT 延到「第一次看廣告」才問，審查員沒觸發到。
+>
+> 修法（build 3）：`src/ads.ts` 的 `warmup()` 改成 App 啟動就問 ATT（在 AdMob 初始化、
+> 收集任何可追蹤資料之前），並加 `whenAppActive()` 等 App active 才問避免靜默失敗。
+
+**流程**：build 3 archive + 上傳 + Processing 完成 → 實機錄影（全新安裝，ATT 一啟動就跳）
+→ 影片上 Google Drive（知道連結的人可檢視，已用匿名下載驗證回傳真實 MP4 檔頭）→ ASC 回覆
+下方文字 + 貼進 App Review Information → Notes → 選 build 3 → 「重新提交至 App 審查」。
+
+### 可直接貼上的回覆（回覆審查 + Notes 兩處都貼）
+
+```
+Thank you for the follow-up review.
+
+We have addressed the App Tracking Transparency issue. In the previous build the
+ATT permission request was only triggered later in the session (the first time a
+player chose to watch a rewarded ad), which is why it may not have appeared
+during review.
+
+In this new build (1.0, build 3) the App Tracking Transparency permission request
+is now presented at app launch, before the advertising SDK is initialized and
+before any data that could be used for tracking is collected.
+
+A screen recording captured on a physical iPhone is provided at the link below.
+It shows:
+- Launching the app from a fresh install (tracking permission reset)
+- The App Tracking Transparency permission request appearing at launch, before
+  any tracking data is collected
+- The user flow that follows the permission request
+
+Screen recording: https://drive.google.com/file/d/1NmbIEIOCC6kKXlOv8ANQhZB6vnEhdGNq/view?usp=sharing
+
+Please review build 1.0 (3). Thank you.
+```
+
+---
+
+## 10. 第三次被退件：4.3(a) Spam + 5.1.2(i) 追蹤（2026-08-19，build 1.0 (3)）
+
+> Submission ID `07378622-aac7-409e-9a08-b00f8486fe27`，於 iPhone 17 Pro Max / iOS 26 審核。
+> 這次同時兩條：
+
+### (A) 5.1.2(i) — 隱私標籤說有追蹤，但找不到 ATT
+根因：App Privacy 勾了 Device ID + Advertising Data「用於追蹤」，但這版把 ATT 移到啟動仍被判
+「行為與標籤不一致 / 找不到追蹤同意」。**採用最乾淨的解法＝乾脆不追蹤**：
+
+- 程式碼（已改，commit 見下）：`src/ads.ts` 一律以 `npa: true` 請求「非個人化廣告」、移除所有
+  `requestTrackingAuthorization` / `whenAppActive` / `ensureTracking`；`Info.plist` 移除
+  `NSUserTrackingUsageDescription`。
+- **你要做（App Store Connect，Account Holder/Admin）**：App Privacy → 把 Device ID 與
+  Advertising Data 的「**Used to Track You**」全部取消（改成 No），送出更新（見 §3 已更新的勾法）。
+  這一步是這條退件能過的關鍵——**標籤一定要與「不追蹤」的行為一致**。
+
+### (B) 4.3(a) — Spam（看起來像換皮的 merge 模板）
+根因：核心迴圈與市面大量 Suika/2048 合成遊戲雷同，商店頁又是通用 merge 字眼。兩手策略：
+
+1. **加入招牌玩法「星座任務（Constellation Missions）」**（已實作，見 `src/constellations.ts`）：
+   畫面頂端常駐一座目標星座，合成出指定階級的星球就點亮星座裡的一顆星，整座點亮＝完成 +
+   大分並解鎖下一座（Triangulum → Cassiopeia → Southern Cross → Cygnus → Orion → Ursa Major）；
+   底部新增 SKY 分頁顯示整條星座階梯。把「把數字合更高」重新定位成「拼出真實星座」，一進遊戲
+   就看得到、和市面 merge 明顯不同。
+2. **改寫商店 metadata**（見 §2 已更新）：關鍵字/副標/描述改以 constellation / stargazing /
+   astronomy 為主軸，去掉通用 merge 字眼。
+3. **在回覆中主張原創**：自建、非模板、非換皮、單帳號單 App、素材原創。
+
+### 可直接貼上的回覆（App Store Connect → 回覆 App 審查；同時貼進 App Review Information → Notes）
+
+```
+Thank you for the review. We have addressed both items.
+
+Guideline 5.1.2(i) — Tracking / ATT:
+This app does NOT track users. It shows no cross-app or cross-site tracking and
+does not access the device advertising identifier (IDFA). Rewarded ads are
+requested as NON-PERSONALIZED ads only. Because the app does not track, it does
+not use the App Tracking Transparency framework, and we have removed the ATT
+usage string from the app. We have also updated the App Privacy information in
+App Store Connect so that Device ID and Advertising Data are marked as NOT used
+to track you, to match the app's behavior.
+
+Guideline 4.3(a) — Spam:
+Cosmic Merge is an original game built from scratch by a single developer. It is
+not based on a third-party template, is not a repackaged app, and is not one of
+several similar apps across accounts. All art, sound, and code are our own.
+
+The game has a distinct concept and mechanic that set it apart from a standard
+merge game: a Constellation Missions system. A target real-world constellation is
+always shown at the top of the screen (Orion, Cassiopeia, the Southern Cross, and
+more). Every planet you merge lights one star of that constellation; completing it
+awards a bonus and unlocks the next constellation, viewable on a dedicated star
+chart. The game also features hand-drawn "cozy paper" artwork, planets with facial
+expressions and moods, an endless star-discovery ladder beyond the Sun, and a
+full-screen black-hole finale — none of which are template features.
+
+We have also updated the app's App Store metadata (subtitle, keywords, and
+description) to reflect this original constellation concept.
+
+Please review the updated build. Thank you for your time.
+```
+
+### 送審流程（build 4）
+1. 程式碼改動已在本機（`src/ads.ts`、`src/constellations.ts`、`src/main.ts`、`index.html`、
+   `src/style.css`、`src/game.ts`、`src/strings.ts`）。先 commit。
+2. `ios/App/App/Info.plist` 已移除 `NSUserTrackingUsageDescription`（`ios/` 不進 git，僅本機）。
+3. 版本號 build 3→4：`project.pbxproj` 兩處 `CURRENT_PROJECT_VERSION` 改 4。
+4. `npm run build:release && npx cap sync ios` →（Xcode Organizer）Archive → Upload。
+5. **App Store Connect → App Privacy 改成不追蹤（見 §3）** ← 這步別忘，否則 5.1.2(i) 會再退。
+6. 更新 §2 的 metadata（副標/關鍵字/描述）。
+7. 換上有星座任務的新截圖（頂端星座列 + SKY 星圖）。
+8. 貼上上面的回覆 → 選 build 4 →「重新提交至 App 審查」。

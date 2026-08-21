@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#F4E9D7" />
     <title>Cosmic Merge</title>
-    <meta name="description" content="Drop cute chibi planets and merge your way from Meteor to the Sun! A Suika-style physics merge game." />
-    <meta property="og:title" content="Cosmic Merge" />
-    <meta property="og:description" content="Suika-style physics merge game with cute chibi planets. Merge from Meteor to the Sun!" />
+    <meta name="description" content="Merge cute planets to chart real constellations — Orion, Cassiopeia and more — in a hand-drawn night sky. Grow from a meteor to the Sun." />
+    <meta property="og:title" content="Cosmic Merge: Constellations" />
+    <meta property="og:description" content="A hand-drawn stargazing puzzle — merge planets to light the stars of real constellations and chart the night sky." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://jeffrey5304lab.github.io/cosmic-merge/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -23,6 +23,16 @@
       <header class="hud">
         <h1 class="title"><span id="title-1">Cosmic </span><span id="title-2" class="title-accent">Merge</span></h1>
       </header>
+
+      <!-- 招牌玩法：常駐星座任務。點一下打開底部 SKY 星圖 -->
+      <div id="constellation" class="skybar" role="button" tabindex="0" aria-label="Constellation goal">
+        <div class="skybar-text">
+          <span class="skybar-label" id="cons-label">CONSTELLATION</span>
+          <span class="skybar-name" id="cons-name">—</span>
+        </div>
+        <svg id="cons-map" class="skybar-map" viewBox="0 0 120 46" aria-hidden="true"></svg>
+        <span class="skybar-progress" id="cons-progress">0/3</span>
+      </div>
 
       <div class="stage-row">
         <aside class="side side-left">
@@ -44,6 +54,7 @@
           <canvas id="game"></canvas>
           <div id="combo" class="combo" aria-live="polite"></div>
           <div id="discover" class="discover" aria-live="polite"></div>
+          <div id="cons-banner" class="cons-banner" aria-live="polite"></div>
           <div id="tutorial" class="tutorial hidden"><p id="tutorial-text"></p></div>
           <div id="hint" class="tutorial hidden"><p id="hint-text"></p></div>
           <div id="leaderboard-modal" class="overlay hidden">
@@ -159,6 +170,7 @@
         <div class="chart-tabs">
           <button id="tab-evolution" class="chart-tab active" type="button">EVOLUTION</button>
           <button id="tab-stars" class="chart-tab" type="button">STARS</button>
+          <button id="tab-sky" class="chart-tab" type="button">SKY</button>
         </div>
         <canvas id="chart" width="640" height="72"></canvas>
       </footer>

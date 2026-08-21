@@ -14,6 +14,13 @@ export const STR = {
   newStarBanner: (name: string) => `New star discovered: ${name}!`,
   goalBlackHole: 'Merge two Suns → a BLACK HOLE swallows everything and reveals a new star!',
   mute: 'Toggle sound',
+  // 星座任務（招牌玩法）：頂端常駐目標 + 底部圖鑑分頁
+  constellationLabel: 'CONSTELLATION',
+  skyTab: 'SKY',
+  constellationHint: (name: string) => `Chart the ${name} — merge planets to light its stars`,
+  constellationDone: (name: string) => `${name} charted!`,
+  constellationBonus: (n: number) => `+${n.toLocaleString('en-US')}`,
+  skyMastered: 'Every constellation charted!',
   overTitle: 'The cosmos is full!',
   overScore: (s: number) => `You scored <strong>${s.toLocaleString('en-US')}</strong>`,
   overNewRecord: (p: string) => `New record! Highest merge: ${p}`,
