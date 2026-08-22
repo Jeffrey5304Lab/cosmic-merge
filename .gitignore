@@ -29,3 +29,6 @@ dist-ssr
 
 # @capacitor/assets 產生的 PWA 圖示（我們 web 版用自己的，不入庫）
 /icons
+
+# App Preview video drafts (generated; re-run scripts/preview-video.mjs)
+previews/
