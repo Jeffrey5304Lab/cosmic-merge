@@ -42,6 +42,15 @@ await page.evaluate(() => {
   const d = new Date()
   const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   localStorage.setItem('cosmic-merge:daily', JSON.stringify({ lastClaim: key, streak: 1 }))
+  // 預先解鎖全部成就 → 錄影中不會跳「XXX unlocked!」吐司蓋住畫面
+  localStorage.setItem(
+    'cosmic-merge:achievements',
+    JSON.stringify([
+      'earth', 'saturn', 'sun', 'supernova', 'discover1', 'polaris',
+      'combo3', 'combo5', 'combo8', 'score1k', 'score5k', 'score10k',
+      'games10', 'games50', 'merges100', 'merges1000',
+    ]),
+  )
 })
 await page.reload({ waitUntil: 'networkidle' })
 await page.waitForTimeout(900)
@@ -50,8 +59,10 @@ const wait = ms => page.waitForTimeout(ms)
 const drop = (x, ms = 780) => page.evaluate(bx => { window.game.aim(bx); window.game.drop() }, x).then(() => wait(ms))
 const spawn = (t, x, y) => page.evaluate(([tt, xx, yy]) => window.game.debugSpawn(tt, xx, yy), [t, x, y])
 
+// ── Beat 0（~1.8s）：乾淨開場——標題 + 空盤面（給 ASC 當封面幀也好看）──
+await wait(1800)
+
 // ── Beat 1（~7s）：真實投放 + 合成，展示手感 ──
-await wait(800)
 for (const x of [230, 150, 310, 200, 260, 180, 300, 230]) await drop(x)
 
 // ── Beat 2（~4s）：做出一顆太陽（兩顆木星合成，號角）──
@@ -63,14 +74,14 @@ await wait(3200)
 // ── Beat 3（~4s）：兩顆太陽塌縮成全螢幕黑洞（招牌一刻）──
 spawn(10, 210, 470)
 spawn(10, 250, 470)
-await wait(3400) // 黑洞過場約 2.7s，多留一點看完整
+await wait(3400) // 黑洞過場約 2.7s，多留一點看完整（含暗黑吞噬期與最後閃光）
 
-// ── Beat 4（~5s）：誕生/發現新恆星 → 切 STARS 圖鑑展示 ──
-await wait(1400) // 讓「New star discovered」橫幅出現
+// ── Beat 4（~6s）：誕生/發現新恆星 → 切 STARS 圖鑑展示 → 乾淨收尾 ──
+await wait(1600) // 讓「New star discovered」橫幅出現、新恆星落定
 await page.evaluate(() => document.getElementById('tab-stars')?.click())
 await wait(2600)
 await page.evaluate(() => document.getElementById('tab-evolution')?.click())
-await wait(700)
+await wait(1400) // 乾淨收尾停一拍
 
 await ctx.close() // 關閉後影片才 flush 完成
 const src = await page.video().path().catch(() => null)
