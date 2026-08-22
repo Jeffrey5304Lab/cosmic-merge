@@ -51,14 +51,19 @@ describe('Game 整合（無頭物理模擬）', () => {
   })
 
   it('持續塞滿場地會觸發遊戲結束，且只觸發一次', () => {
-    const { game, events } = makeGame()
-    // 最多模擬 150 秒、每 0.5 秒丟一顆（約 300 顆），中途結束就停
+    // 用固定種子 + 橫向散佈投放（貼牆到貼牆）：讓盤面「必然」被填滿到輸線，
+    // 測試結果可重現、不再因隨機掉落階級/中央堆疊被合掉而時過時不過。
+    const { game, events } = makeGame(mulberry32(12345))
+    // 橫向掃過整個場地寬度，避免只堆中央被合成清掉
+    const xs = [80, 150, 230, 310, 380]
     const step = 1 / 60
     let sinceDrop = 0
+    let dropIdx = 0
     for (let t = 0; t < 150 && game.state !== 'over'; t += step) {
       sinceDrop += step
       if (sinceDrop >= 0.5) {
         sinceDrop = 0
+        game.aim(xs[dropIdx++ % xs.length])
         game.drop()
       }
       game.update(step)

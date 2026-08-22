@@ -1,7 +1,7 @@
 {
-  "name": "Cosmic Merge",
-  "short_name": "Cosmic Merge",
-  "description": "Suika-style physics merge game with cute chibi planets.",
+  "name": "Novaborn",
+  "short_name": "Novaborn",
+  "description": "A cozy cosmic puzzle: grow worlds, collapse Suns into a black hole, and discover new stars.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",

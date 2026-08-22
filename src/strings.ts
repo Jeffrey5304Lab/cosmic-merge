@@ -2,9 +2,9 @@
 import { TIERS } from './planets'
 
 export const STR = {
-  docTitle: 'Cosmic Merge',
-  title1: 'Cosmic ',
-  title2: 'Merge',
+  docTitle: 'Novaborn',
+  title1: 'Nova',
+  title2: 'born',
   score: 'SCORE',
   best: 'BEST',
   next: 'NEXT',

@@ -47,6 +47,40 @@ function stats(frames) {
   }
 }
 
+/**
+ * 用「真實 pointerup 事件」投放。Playwright 的 page.mouse.click / touchscreen.tap 在無頭
+ * Chromium 下不會觸發遊戲 canvas 的 pointerup 監聽（合成事件抵達不到），會造成假性失敗；
+ * 直接 dispatch PointerEvent 才等同玩家在真實瀏覽器點一下（已驗證會投放）。
+ */
+function dropAt(page, fx = 0.5) {
+  return page.evaluate(fx => {
+    const c = document.getElementById('game')
+    const b = c.getBoundingClientRect()
+    c.dispatchEvent(
+      new PointerEvent('pointerup', {
+        clientX: b.left + b.width * fx,
+        clientY: b.top + b.height * 0.4,
+        bubbles: true,
+        pointerId: 1,
+      }),
+    )
+  }, fx)
+}
+/** 真實 keydown 空白鍵（同理，取代 page.keyboard.press 在無頭下的失效） */
+function pressSpace(page) {
+  return page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true })))
+}
+/**
+ * 開場的每日獎勵彈窗會讓遊戲 paused（物理凍結、鍵盤投放被擋）。真實玩家會先領/關掉它，
+ * QA 也要先關，否則會誤判「不能投放/分數不保留」。
+ */
+function dismissDaily(page) {
+  return page.evaluate(() => {
+    const d = document.getElementById('daily-modal')
+    if (d && !d.classList.contains('hidden')) document.getElementById('daily-claim')?.click()
+  })
+}
+
 const browser = await chromium.launch()
 const errors = []
 
@@ -56,6 +90,7 @@ const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.waitForTimeout(800)
+  await dismissDaily(page)
 
   const idle = stats(await measureFps(page))
   check('閒置 FPS ≥ 55', idle.avgFps >= 55, `avg ${idle.avgFps.toFixed(1)}fps, worst frame ${idle.worst.toFixed(1)}ms`)
@@ -66,12 +101,12 @@ const errors = []
   for (let i = 0; i < 35; i++) {
     const over = await page.locator('#gameover').evaluate(el => !el.classList.contains('hidden'))
     if (over) break
-    await page.mouse.click(box.x + box.width * xs[i % xs.length], box.y + box.height * 0.4)
+    await dropAt(page, xs[i % xs.length])
     await page.waitForTimeout(460)
   }
   const measuring = measureFps(page)
   for (let i = 0; i < 8; i++) {
-    await page.mouse.click(box.x + box.width * xs[i % xs.length], box.y + box.height * 0.4)
+    await dropAt(page, xs[i % xs.length])
     await page.waitForTimeout(460)
   }
   const stress = stats(await measuring)
@@ -87,10 +122,11 @@ const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.waitForTimeout(400)
+  await dismissDaily(page)
   const shown = await page.locator('#tutorial').evaluate(el => !el.classList.contains('hidden'))
   check('首次進入顯示教學', shown)
   const box = await page.locator('#game').boundingBox()
-  await page.mouse.click(box.x + box.width / 2, box.y + 300)
+  await dropAt(page, 0.5)
   await page.waitForTimeout(600)
   const hidden = await page.locator('#tutorial').evaluate(el => el.classList.contains('hidden'))
   check('投放後教學收起', hidden)
@@ -113,7 +149,7 @@ const errors = []
   // 玩出分數 → 重載 → 最佳分數保留
   const box2 = await page.locator('#game').boundingBox()
   for (let i = 0; i < 10; i++) {
-    await page.mouse.click(box2.x + box2.width / 2, box2.y + 300)
+    await dropAt(page, [0.42, 0.5, 0.58][i % 3])
     await page.waitForTimeout(460)
   }
   await page.waitForTimeout(1200)
@@ -131,12 +167,13 @@ const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.waitForTimeout(400)
+  await dismissDaily(page)
 
   // 鍵盤：space 投放後 next-name 應該換（序列前進）
   const before = await page.locator('#next-name').textContent()
   let changed = false
   for (let i = 0; i < 5 && !changed; i++) {
-    await page.keyboard.press('Space')
+    await pressSpace(page)
     await page.waitForTimeout(550)
     changed = (await page.locator('#next-name').textContent()) !== before
   }
@@ -154,6 +191,7 @@ const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(URL, { waitUntil: 'networkidle' })
   await page.waitForTimeout(600)
+  await dismissDaily(page)
   // 觸控投放
   const box = await page.locator('#game').boundingBox()
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)

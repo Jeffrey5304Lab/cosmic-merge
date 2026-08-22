@@ -16,7 +16,7 @@ export interface AdProvider {
   readonly name: string
   /** 兌現獎勵；可兌現回傳 true（接真實廣告後＝玩家完整看完才 true） */
   showRewarded(slot: AdSlot): Promise<boolean>
-  /** 選用：App 啟動時預熱（初始化 SDK／跳 iOS 追蹤授權），讓玩家第一次點按時廣告已經準備好 */
+  /** 選用：App 啟動時預熱（初始化 SDK），讓玩家第一次點按時廣告已經準備好 */
   warmup?(): Promise<void>
 }
 
@@ -45,23 +45,13 @@ class AdMobProvider implements AdProvider {
     return this.initDone
   }
 
-  private trackingAsked = false
-
   /**
-   * iOS 14.5+ 追蹤授權（ATT）：延到玩家「第一次真的要看廣告」時才問。
-   * 開場就問會跟每日獎勵彈窗擠在一起、也沒情境；有情境地問同意率更高。
+   * App 啟動時預熱：初始化 SDK，讓第一次看廣告不用等 SDK 載入。
+   *
+   * 本 App 不做跨 App／跨網站追蹤（不使用 IDFA、不呼叫 ATT）：所有廣告一律以
+   * 「非個人化廣告」(npa) 請求（見 showRewarded）。因此不需要 AppTrackingTransparency
+   * 彈窗，App Store Connect 的隱私標籤也應標示為「不用於追蹤你」。
    */
-  private async ensureTracking(): Promise<void> {
-    if (this.trackingAsked) return
-    this.trackingAsked = true
-    try {
-      await AdMob.requestTrackingAuthorization()
-    } catch {
-      // 拒絕追蹤或平台不支援：忽略，AdMob 會自動退回非個人化廣告
-    }
-  }
-
-  /** App 啟動時預熱：只先初始化 SDK（不跳追蹤授權），讓第一次看廣告不用等 SDK 載入。 */
   async warmup(): Promise<void> {
     try {
       await this.ensureInit()
@@ -73,7 +63,6 @@ class AdMobProvider implements AdProvider {
   async showRewarded(_slot: AdSlot): Promise<boolean> {
     try {
       await this.ensureInit()
-      await this.ensureTracking() // 第一次看廣告的當下才問 ATT（延後授權）
       let earned = false
       // 一定要在 show 之前掛 listener：獎勵是用事件回報，showRewardVideoAd() 的
       // resolve 只代表「廣告流程跑完」（看到一半關掉也會 resolve），不能單獨拿來判斷。
@@ -81,7 +70,9 @@ class AdMobProvider implements AdProvider {
         earned = true
       })
       try {
-        await AdMob.prepareRewardVideoAd({ adId: this.adUnitId() })
+        // npa: true → 請求「非個人化廣告」，不使用 IDFA／不做追蹤，
+        // 因此不需要 ATT 授權（見 warmup 說明）。
+        await AdMob.prepareRewardVideoAd({ adId: this.adUnitId(), npa: true })
         await AdMob.showRewardVideoAd()
       } finally {
         await rewardListener.remove()
