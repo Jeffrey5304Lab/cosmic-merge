@@ -64,7 +64,7 @@ export function renderShareCard(score: number, maxTier: number): HTMLCanvasEleme
   g.font = "64px 'Gochi Hand', cursive"
   g.textAlign = 'center'
   g.fillStyle = '#3B3024'
-  g.fillText('Cosmic Merge', W / 2, 100)
+  g.fillText('Novaborn', W / 2, 100)
 
   // 分數
   g.font = "bold 26px system-ui, sans-serif"
@@ -91,7 +91,7 @@ export async function shareCard(score: number, maxTier: number): Promise<'shared
 
     const file = new File([blob], 'cosmic-merge-score.png', { type: 'image/png' })
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Cosmic Merge' })
+      await navigator.share({ files: [file], title: 'Novaborn' })
       return 'shared'
     }
 
