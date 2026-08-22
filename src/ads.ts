@@ -16,7 +16,7 @@ export interface AdProvider {
   readonly name: string
   /** 兌現獎勵；可兌現回傳 true（接真實廣告後＝玩家完整看完才 true） */
   showRewarded(slot: AdSlot): Promise<boolean>
-  /** 選用：App 啟動時預熱（初始化 SDK／跳 iOS 追蹤授權），讓玩家第一次點按時廣告已經準備好 */
+  /** 選用：App 啟動時預熱（初始化 SDK），讓玩家第一次點按時廣告已經準備好 */
   warmup?(): Promise<void>
 }
 
